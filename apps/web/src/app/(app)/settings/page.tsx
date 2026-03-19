@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useAccountStore } from '@/stores/account.store'
+import { api } from '@/lib/api-client'
 import { notifications } from '@/lib/notifications'
 import {
   THEME_PRESETS,
@@ -38,8 +39,17 @@ export default function UserSettingsPage() {
   const [testingAccountId, setTestingAccountId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ id: string; valid: boolean; username?: string } | null>(null)
 
+  // Claude CLI auth
+  const [claudeStatus, setClaudeStatus] = useState<{
+    cliLoggedIn: boolean; cliEmail: string | null; cliAuthMethod: string | null; cliSubscription: string | null
+  } | null>(null)
+  const [claudeLoginUrl, setClaudeLoginUrl] = useState<string | null>(null)
+  const [claudeLoggingIn, setClaudeLoggingIn] = useState(false)
+  const [claudeLoginPollRef] = useState<{ current: ReturnType<typeof setInterval> | null }>({ current: null })
+
   useEffect(() => {
     fetchAccounts()
+    api.get<any>('/api/claude/status').then(setClaudeStatus).catch(() => {})
   }, [fetchAccounts])
 
   useEffect(() => {
@@ -322,6 +332,124 @@ export default function UserSettingsPage() {
             <span className="font-mono text-sm text-[var(--muted-foreground)]">
               {customColor}
             </span>
+          </div>
+        )}
+      </div>
+
+      {/* Claude CLI Auth */}
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold">Claude CLI Account</h3>
+            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+              Sign in with your Claude/Anthropic account. Same as running &quot;claude auth login&quot; in the terminal.
+            </p>
+          </div>
+          {claudeStatus?.cliLoggedIn && (
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-green-400" />
+              <span className="text-xs text-green-400">Connected</span>
+            </div>
+          )}
+        </div>
+
+        {claudeStatus?.cliLoggedIn ? (
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center gap-3 rounded-lg bg-[var(--secondary)] px-4 py-3">
+              <div className="flex-1">
+                <p className="text-sm font-medium">{claudeStatus.cliEmail}</p>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  {claudeStatus.cliAuthMethod === 'claude.ai' ? 'Claude Pro/Max' : 'Anthropic Console'}
+                  {claudeStatus.cliSubscription ? ` (${claudeStatus.cliSubscription})` : ''}
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!confirm('Sign out from Claude CLI?')) return
+                  try {
+                    await api.post('/api/claude/logout', {})
+                    setClaudeStatus({ cliLoggedIn: false, cliEmail: null, cliAuthMethod: null, cliSubscription: null })
+                  } catch { /* ignore */ }
+                }}
+                className="rounded-md border border-red-500/30 px-3 py-1 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10"
+              >
+                Sign Out
+              </button>
+            </div>
+            <button
+              onClick={async () => {
+                setClaudeLoggingIn(true)
+                setClaudeLoginUrl(null)
+                try {
+                  const result = await api.post<{ url: string | null }>('/api/claude/login', {})
+                  if (result.url) {
+                    setClaudeLoginUrl(result.url)
+                    // Poll for completion
+                    claudeLoginPollRef.current = setInterval(async () => {
+                      try {
+                        const s = await api.get<{ status: string; email?: string }>('/api/claude/login/status')
+                        if (s.status === 'success') {
+                          if (claudeLoginPollRef.current) clearInterval(claudeLoginPollRef.current)
+                          setClaudeLoggingIn(false)
+                          setClaudeLoginUrl(null)
+                          api.get<any>('/api/claude/status').then(setClaudeStatus).catch(() => {})
+                        }
+                      } catch { /* ignore */ }
+                    }, 2000)
+                    setTimeout(() => { if (claudeLoginPollRef.current) clearInterval(claudeLoginPollRef.current); setClaudeLoggingIn(false) }, 300000)
+                  }
+                } catch { setClaudeLoggingIn(false) }
+              }}
+              className="text-xs text-[var(--primary)] hover:underline"
+            >
+              Switch to a different account
+            </button>
+          </div>
+        ) : (
+          <div className="mt-3">
+            {claudeLoginUrl ? (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2">
+                  <p className="text-xs font-medium text-yellow-400">Waiting for authorization...</p>
+                </div>
+                <a
+                  href={claudeLoginUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full rounded-lg bg-[var(--primary)] px-4 py-2 text-center text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Open Claude Login Page
+                </a>
+              </div>
+            ) : (
+              <button
+                onClick={async () => {
+                  setClaudeLoggingIn(true)
+                  try {
+                    const result = await api.post<{ url: string | null }>('/api/claude/login', {})
+                    if (result.url) {
+                      setClaudeLoginUrl(result.url)
+                      claudeLoginPollRef.current = setInterval(async () => {
+                        try {
+                          const s = await api.get<{ status: string; email?: string }>('/api/claude/login/status')
+                          if (s.status === 'success') {
+                            if (claudeLoginPollRef.current) clearInterval(claudeLoginPollRef.current)
+                            setClaudeLoggingIn(false)
+                            setClaudeLoginUrl(null)
+                            api.get<any>('/api/claude/status').then(setClaudeStatus).catch(() => {})
+                          }
+                        } catch { /* ignore */ }
+                      }, 2000)
+                      setTimeout(() => { if (claudeLoginPollRef.current) clearInterval(claudeLoginPollRef.current); setClaudeLoggingIn(false) }, 300000)
+                    }
+                  } catch { setClaudeLoggingIn(false) }
+                }}
+                disabled={claudeLoggingIn}
+                className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {claudeLoggingIn ? 'Connecting...' : 'Sign in to Claude'}
+              </button>
+            )}
           </div>
         )}
       </div>
