@@ -1728,9 +1728,15 @@ export default function ChatSessionPage() {
     await sendMessage(sessionId, userText, activeAgent?.id, undefined, undefined, effortLevel)
   }, [sessionId, sendMessage, activeAgent, effortLevel])
 
+  const totalTokens = currentSession ? (currentSession.totalInputTokens || 0) + (currentSession.totalOutputTokens || 0) : 0
+  const modelShort = (currentSession?.model || 'claude-sonnet-4-6').replace('claude-', '').replace(/-\d+$/, '')
+
   return (
     <SplitTerminal projectId={projectId}>
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full gap-0 overflow-hidden">
+      {/* LEFT: Chat area */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+
       {/* Session header — clean, minimal */}
       <div className="mb-3 flex items-center justify-between gap-2 pb-3" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
         <div className="flex min-w-0 items-center gap-3">
@@ -2149,6 +2155,17 @@ export default function ChatSessionPage() {
           </div>
         )}
 
+        {/* Engine badge + shortcut hint */}
+        <div className="flex items-center justify-center gap-3 pb-2">
+          <span className="flex items-center gap-1.5 rounded-sm px-2 py-0.5 font-label text-[9px] font-bold uppercase tracking-widest text-[#adaaaa]" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.15)' }}>
+            <span className="h-1.5 w-1.5 rounded-full bg-[#3bfb8c]" />
+            ENGINE: {modelShort.toUpperCase().replace(/ /g, '_')}
+          </span>
+          <span className="rounded-sm px-2 py-0.5 font-label text-[9px] font-bold uppercase tracking-widest text-[#adaaaa]" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.15)' }}>
+            CMD + ENTER TO SEND
+          </span>
+        </div>
+
         <ChatInput
           sessionId={sessionId}
           isStreaming={isStreaming}
@@ -2169,6 +2186,103 @@ export default function ChatSessionPage() {
           onClose={() => setShowPlayback(false)}
         />
       )}
+      </div>{/* end left chat area */}
+
+      {/* RIGHT: Session Metrics Sidebar */}
+      <div className="hidden w-72 shrink-0 overflow-y-auto border-l border-[rgba(72,72,71,0.15)] pl-6 lg:block">
+        <div className="space-y-6 py-2">
+          {/* Header */}
+          <h3 className="font-label text-[10px] font-bold uppercase tracking-[0.15em] text-[#adaaaa]">Session Metrics</h3>
+
+          {/* Agent/Engine info */}
+          <div className="rounded-[0.75rem] bg-[#131313] p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[0.375rem]" style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}>
+                <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">{activeAgent?.name || 'Claude Engine'}</p>
+                <p className="text-[10px] text-[#adaaaa]">{activeAgent ? 'Active Agent' : 'Default Engine'}</p>
+              </div>
+            </div>
+            {/* Model + Latency pills */}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-[0.375rem] bg-[#1a1a1a] px-3 py-2 text-center">
+                <p className="font-label text-[8px] font-bold uppercase tracking-widest text-[#adaaaa]">Model</p>
+                <p className="mt-0.5 font-headline text-xs font-semibold text-[#bd9dff]">{modelShort}</p>
+              </div>
+              <div className="rounded-[0.375rem] bg-[#1a1a1a] px-3 py-2 text-center">
+                <p className="font-label text-[8px] font-bold uppercase tracking-widest text-[#adaaaa]">Effort</p>
+                <p className="mt-0.5 font-headline text-xs font-semibold text-[#ffa5d9]">{effortLevel}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Context Window */}
+          <div style={{ borderTop: '1px solid rgba(72,72,71,0.15)' }} className="pt-4">
+            <div className="flex items-center justify-between">
+              <span className="font-label text-[10px] font-bold uppercase tracking-widest text-[#adaaaa]">Context Window</span>
+              <span className="font-headline text-sm font-bold text-[#bd9dff]">
+                {formatTokens(currentSession?.totalInputTokens || 0)} <span className="font-normal text-[#adaaaa]">/ 200k</span>
+              </span>
+            </div>
+            <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#262626]">
+              <div className="h-full rounded-full bg-[#bd9dff]" style={{ width: `${Math.min(((currentSession?.totalInputTokens || 0) / 200000) * 100, 100)}%` }} />
+            </div>
+          </div>
+
+          {/* Tokens Used */}
+          <div style={{ borderTop: '1px solid rgba(72,72,71,0.15)' }} className="pt-4">
+            <div className="flex items-center justify-between">
+              <span className="font-label text-[10px] font-bold uppercase tracking-widest text-[#adaaaa]">Tokens Used</span>
+              <span className="font-headline text-sm font-bold text-[#ffa5d9]">{formatTokens(totalTokens)}</span>
+            </div>
+            <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#262626]">
+              <div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #bd9dff, #ffa5d9)', width: `${Math.min(totalTokens / 1000, 100)}%` }} />
+            </div>
+            <p className="mt-1.5 font-mono text-[10px] italic text-[#adaaaa]">
+              Approx cost: ${((currentSession?.totalCostUsd || 0)).toFixed(4)} USD
+            </p>
+          </div>
+
+          {/* Session info */}
+          <div style={{ borderTop: '1px solid rgba(72,72,71,0.15)' }} className="space-y-3 pt-4">
+            <span className="font-label text-[10px] font-bold uppercase tracking-widest text-[#adaaaa]">Session Info</span>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[#adaaaa]">Messages</span>
+              <span className="font-mono font-semibold text-white">{messages.length}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[#adaaaa]">Mode</span>
+              <span className="font-mono font-semibold text-white">{planMode ? 'Plan' : currentSession?.mode || 'code'}</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-2 pt-2">
+            {messages.length > 0 && !isStreaming && (
+              <button
+                onClick={() => setShowPlayback(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-[0.375rem] py-2.5 text-xs font-medium text-[#adaaaa] transition-colors hover:text-white"
+                style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Session History
+              </button>
+            )}
+            <button
+              onClick={() => { if (confirm('Clear all messages in this session?')) { /* TODO: clear session */ } }}
+              className="flex w-full items-center justify-center gap-2 rounded-[0.375rem] py-2.5 text-xs font-medium text-[#ff6e84] transition-colors hover:brightness-125"
+              style={{ border: '1px solid rgba(255,110,132,0.2)' }}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              Clear Session
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     </SplitTerminal>
   )
