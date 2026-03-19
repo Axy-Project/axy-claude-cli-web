@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+.next/
+.turbo/
+out/
+
+# Environment & secrets
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Database (local dev)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+pgdata/
+
+# Data (user projects, uploads)
+apps/server/data/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/settings.json
+
+# Temp
+.tmp-uploads/
+tmp/

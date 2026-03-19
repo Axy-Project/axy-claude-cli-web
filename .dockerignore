@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+**/dist
+**/.next
+**/.turbo
+
+# Dev & config
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+
+# IDE
+.vscode
+.idea
+**/*.swp
+**/*.swo
+
+# OS
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose*.yml
+**/Dockerfile
+.dockerignore
+
+# Documentation & misc
+*.md
+LICENSE
+logos
+
+# Dev data
+apps/server/data
+apps/server/tmp

@@ -1,0 +1,36 @@
+# Development overrides - use with: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+services:
+  db:
+    ports:
+      - "5432:5432"
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+      target: builder
+    command: pnpm --filter @axy/server dev
+    volumes:
+      - ./apps/server/src:/app/apps/server/src
+      - ./packages/shared/src:/app/packages/shared/src
+    environment:
+      NODE_ENV: development
+    ports:
+      - "${SERVER_PORT:-3456}:3456"
+      - "9229:9229"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: builder
+    command: pnpm --filter @axy/web dev
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/public:/app/apps/web/public
+      - ./packages/shared/src:/app/packages/shared/src
+    environment:
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "${WEB_PORT:-3457}:3457"

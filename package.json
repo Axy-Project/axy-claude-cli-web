@@ -1,0 +1,22 @@
+{
+  "name": "axy-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Axy Web - Remote Claude CLI interface",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "dev:server": "turbo dev --filter=@axy/server",
+    "dev:web": "turbo dev --filter=@axy/web",
+    "db:generate": "turbo db:generate --filter=@axy/server",
+    "db:migrate": "turbo db:migrate --filter=@axy/server"
+  },
+  "packageManager": "pnpm@10.30.2",
+  "pnpm": {
+    "onlyBuiltDependencies": ["node-pty"]
+  },
+  "devDependencies": {
+    "turbo": "^2.8.14"
+  }
+}
