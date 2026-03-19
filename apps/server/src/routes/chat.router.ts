@@ -8,6 +8,7 @@ import { projectService } from '../services/project.service.js'
 import { sessionService } from '../services/session.service.js'
 import { orchestratorService } from '../services/orchestrator.service.js'
 import { agentService } from '../services/agent.service.js'
+import { accountService } from '../services/account.service.js'
 import { broadcaster } from '../ws/broadcaster.js'
 
 const router = Router()
@@ -79,6 +80,16 @@ router.post('/send', async (req: AuthenticatedRequest, res) => {
         await fs.writeFile(filePath, buffer)
         imagePaths.push(filePath)
       }
+    }
+
+    // Check that Claude API key is available
+    const claudeApiKey = await accountService.resolveClaudeApiKey(req.userId!, session.projectId)
+    if (!claudeApiKey && !process.env.ANTHROPIC_API_KEY) {
+      res.status(400).json({
+        success: false,
+        error: 'No Claude API key configured. Add one in Settings > Claude API Keys, or set ANTHROPIC_API_KEY environment variable.',
+      })
+      return
     }
 
     // Auto-subscribe user's WS connections to this session BEFORE emitting events

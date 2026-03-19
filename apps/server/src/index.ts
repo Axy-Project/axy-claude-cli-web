@@ -39,6 +39,7 @@ import activityRouter from './routes/activity.router.js'
 import accountsRouter from './routes/accounts.router.js' // Multi-account support
 import deployRouter from './routes/deploy.router.js'
 import setupRouter from './routes/setup.router.js'
+import claudeAuthRouter from './routes/claude-auth.router.js'
 
 const app = express()
 const server = createServer(app)
@@ -53,6 +54,7 @@ app.use('/api', apiLimiter)
 app.use('/api/health', healthRouter)
 app.use('/api/setup', setupRouter)
 app.use('/api/auth', authRouter)
+app.use('/api/claude', claudeAuthRouter)
 app.use('/api/projects', projectsRouter)
 app.use('/api/sessions', sessionsRouter)
 app.use('/api/chat', chatRouter)
