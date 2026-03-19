@@ -388,7 +388,7 @@ export const ChatInput = memo(function ChatInput({
   }, [setInputExternal, input])
 
   return (
-    <div className="glass-panel rounded-t-[0.75rem] px-4 py-3 md:px-6 md:py-4" style={{ borderTop: '1px solid rgba(72,72,71,0.15)' }}>
+    <div className="rounded-[0.75rem] px-4 py-3 md:px-6 md:py-4" style={{ background: 'rgba(26,26,26,0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(72,72,71,0.15)' }}>
       {/* Image previews */}
       {attachedImages.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
@@ -406,8 +406,8 @@ export const ChatInput = memo(function ChatInput({
         </div>
       )}
 
-      <div className="flex items-end gap-2">
-        <span className="mb-2.5 hidden shrink-0 font-mono text-lg font-bold text-[#bd9dff] md:inline">&#10095;</span>
+      <div className="flex items-center gap-3">
+        <span className="hidden shrink-0 font-mono text-lg font-bold text-[#bd9dff] md:inline">&#10095;</span>
         <div className="relative min-w-0 flex-1">
           {/* Slash command autocomplete */}
           <SlashCommandMenu
@@ -500,8 +500,8 @@ export const ChatInput = memo(function ChatInput({
         <button
           onClick={handleSend}
           disabled={!input.trim() && attachedImages.length === 0}
-          className="shrink-0 self-end rounded-[0.375rem] text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-30"
-          style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.5rem] text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-30"
+          style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

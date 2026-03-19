@@ -81,10 +81,12 @@ export function SplitTerminal({ projectId, children }: SplitTerminalProps) {
           {!isOpen && (
             <button
               onClick={() => togglePanel(projectId)}
-              className="absolute bottom-20 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--muted-foreground)] shadow-lg transition-all hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
+              className="absolute right-3 top-1 z-10 flex h-7 items-center gap-1.5 rounded-[0.375rem] px-2.5 text-[10px] font-medium text-[#adaaaa] transition-all hover:text-white"
+              style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}
               title="Open Terminal (split view)"
             >
-              <Terminal className="h-4 w-4" />
+              <Terminal className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Terminal</span>
             </button>
           )}
         </div>

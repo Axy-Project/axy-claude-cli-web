@@ -1,7 +1,8 @@
 'use client'
 
 import { useAuthStore } from '@/stores/auth.store'
-import { useRouter } from 'next/navigation'
+import { useProjectStore } from '@/stores/project.store'
+import { useRouter, usePathname } from 'next/navigation'
 
 interface TopbarProps {
   onMenuToggle?: () => void
@@ -9,12 +10,18 @@ interface TopbarProps {
 
 export function Topbar({ onMenuToggle }: TopbarProps) {
   const { user, logout } = useAuthStore()
+  const currentProject = useProjectStore((s) => s.currentProject)
   const router = useRouter()
+  const pathname = usePathname()
 
   const handleLogout = () => {
     logout()
     router.replace('/login')
   }
+
+  // Show project name if we're inside a project
+  const isInProject = pathname.includes('/projects/') && pathname.split('/projects/')[1]?.length > 0
+  const projectName = isInProject ? currentProject?.name : null
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between bg-[var(--background)]/60 px-6 backdrop-blur-xl">
@@ -36,9 +43,15 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
           <span className="font-headline text-sm font-semibold">Claude CLI</span>
         </div>
 
-        {/* Workspace selector placeholder */}
+        {/* Project name or session info */}
         <div className="hidden items-center gap-2 md:flex">
-          <span className="font-label text-xs text-[var(--muted-foreground)]">Workspace Selector</span>
+          {projectName ? (
+            <span className="font-label text-xs text-[#adaaaa]">
+              Session: <span className="text-white">{projectName}</span>
+            </span>
+          ) : (
+            <span className="font-label text-xs text-[#adaaaa]">Axy Web</span>
+          )}
         </div>
       </div>
 
