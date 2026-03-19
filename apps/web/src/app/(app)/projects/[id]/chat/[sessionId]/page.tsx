@@ -1731,9 +1731,9 @@ export default function ChatSessionPage() {
   return (
     <SplitTerminal projectId={projectId}>
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Session header */}
-      <div className="mb-3 flex items-start justify-between gap-2 pb-3 md:mb-4 md:items-center md:pb-4" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
-        <div className="flex min-w-0 items-start gap-2 md:items-center md:gap-3">
+      {/* Session header — clean, minimal */}
+      <div className="mb-3 flex items-center justify-between gap-2 pb-3" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
+        <div className="flex min-w-0 items-center gap-3">
           <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-[0.375rem] sm:flex" style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}>
             <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -1755,7 +1755,8 @@ export default function ChatSessionPage() {
                 Branched from: {parentSessionTitle}
               </button>
             )}
-            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[var(--muted-foreground)] md:gap-2">
+            {/* Compact info line */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[#adaaaa] md:gap-2">
               <ModelSelector
                 currentModel={currentSession?.model || 'claude-sonnet-4-6'}
                 onSelect={handleModelChange}
@@ -1817,131 +1818,79 @@ export default function ChatSessionPage() {
             </div>
           </div>
         </div>
+        {/* Right side — simplified actions */}
         <div className="relative flex shrink-0 items-center gap-1.5 md:gap-2">
-          {/* Message search */}
-          {showSearch && (
-            <div className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)]/50 px-2 py-1">
-              <svg className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          {/* Search inline */}
+          {showSearch ? (
+            <div className="flex items-center gap-1 rounded-[0.375rem] px-2 py-1" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}>
+              <svg className="h-3.5 w-3.5 shrink-0 text-[#adaaaa]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  setSearchHighlightIndex(0)
-                }}
+                onChange={(e) => { setSearchQuery(e.target.value); setSearchHighlightIndex(0) }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchMatchArray.length > 0) {
-                    setSearchHighlightIndex((i) => (i + 1) % searchMatchArray.length)
-                  }
-                  if (e.key === 'Escape') {
-                    setShowSearch(false)
-                    setSearchQuery('')
-                    setSearchHighlightIndex(-1)
-                  }
+                  if (e.key === 'Enter' && searchMatchArray.length > 0) setSearchHighlightIndex((i) => (i + 1) % searchMatchArray.length)
+                  if (e.key === 'Escape') { setShowSearch(false); setSearchQuery(''); setSearchHighlightIndex(-1) }
                 }}
-                placeholder="Search messages..."
-                className="w-28 border-none bg-transparent text-xs text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)] md:w-40"
+                placeholder="Search..."
+                className="w-28 border-none bg-transparent text-xs text-white outline-none placeholder:text-[#adaaaa]/50 md:w-36"
                 autoFocus
               />
-              {searchQuery && (
-                <span className="shrink-0 text-[10px] text-[var(--muted-foreground)]">
-                  {searchMatchIds.size > 0 ? `${Math.min(searchHighlightIndex + 1, searchMatchArray.length)}/${searchMatchArray.length}` : '0/0'}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSearch(false)
-                  setSearchQuery('')
-                  setSearchHighlightIndex(-1)
-                }}
-                className="ml-0.5 rounded p-0.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-              >
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+              <button type="button" onClick={() => { setShowSearch(false); setSearchQuery(''); setSearchHighlightIndex(-1) }} className="text-[#adaaaa] hover:text-white">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-          )}
-          {!showSearch && messages.length > 0 && (
+          ) : messages.length > 0 ? (
+            <button type="button" onClick={() => setShowSearch(true)} className="rounded-[0.375rem] p-1.5 text-[#adaaaa] transition-colors hover:text-white" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }} title="Search">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </button>
+          ) : null}
+
+          {/* Session menu dropdown */}
+          <div className="relative">
             <button
               type="button"
-              onClick={() => setShowSearch(true)}
-              className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)]/50 px-2 py-1 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)]/40 hover:text-[var(--foreground)] md:gap-1.5 md:px-3 md:py-1.5"
-              title="Search messages"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-1.5 rounded-[0.375rem] px-2.5 py-1.5 text-[11px] font-medium text-[#adaaaa] transition-colors hover:text-white"
+              style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}
             >
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              <span className="hidden sm:inline">Session</span>
             </button>
-          )}
-          <span className="hidden md:inline"><TaskPanel projectId={projectId} sessionId={sessionId} /></span>
-          {messages.length > 0 && !isStreaming && (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowExportMenu(!showExportMenu)}
-                className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)]/50 px-2 py-1 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)]/40 hover:text-[var(--foreground)] md:gap-1.5 md:px-3 md:py-1.5"
-                title="Export session"
-              >
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span className="hidden sm:inline">Export</span>
-              </button>
-              {showExportMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
-                  <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-[var(--border)] bg-[var(--card)] py-1 shadow-lg">
-                    <button
-                      type="button"
-                      onClick={() => handleExport('markdown')}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-[var(--foreground)] hover:bg-[var(--secondary)]"
-                    >
-                      <svg className="h-3.5 w-3.5 text-[var(--muted-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Export as Markdown
+            {showExportMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-[0.75rem] py-1.5 shadow-[0_40px_60px_-10px_rgba(255,255,255,0.04)]" style={{ background: '#262626', border: '1px solid rgba(72,72,71,0.2)' }}>
+                  <button type="button" onClick={() => { handleExport('markdown'); setShowExportMenu(false) }} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs text-[#adaaaa] transition-colors hover:bg-[#1a1a1a] hover:text-white">
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                    Export Markdown
+                  </button>
+                  <button type="button" onClick={() => { handleExport('json'); setShowExportMenu(false) }} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs text-[#adaaaa] transition-colors hover:bg-[#1a1a1a] hover:text-white">
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                    Export JSON
+                  </button>
+                  {messages.length > 0 && !isStreaming && (
+                    <button type="button" onClick={() => { setShowPlayback(true); setShowExportMenu(false) }} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs text-[#adaaaa] transition-colors hover:bg-[#1a1a1a] hover:text-white">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      Session Replay
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleExport('json')}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-[var(--foreground)] hover:bg-[var(--secondary)]"
-                    >
-                      <svg className="h-3.5 w-3.5 text-[var(--muted-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                      </svg>
-                      Export as JSON
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-          {messages.length > 0 && !isStreaming && (
-            <button
-              type="button"
-              onClick={() => setShowPlayback(true)}
-              className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)]/50 px-2 py-1 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)]/40 hover:text-[var(--foreground)] md:gap-1.5 md:px-3 md:py-1.5"
-              title="Replay session"
-            >
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="hidden sm:inline">Replay</span>
-            </button>
-          )}
+                  )}
+                  <div className="my-1" style={{ borderTop: '1px solid rgba(72,72,71,0.15)' }} />
+                  <span className="hidden md:block"><TaskPanel projectId={projectId} sessionId={sessionId} /></span>
+                </div>
+              </>
+            )}
+          </div>
+
           {isStreaming && (
             <button
               onClick={() => stopGeneration(sessionId)}
-              className="flex items-center gap-1 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-2 py-1 text-xs font-medium text-[var(--destructive)] transition-colors hover:bg-[var(--destructive)]/20 md:gap-1.5 md:px-3 md:py-1.5"
+              className="flex items-center gap-1.5 rounded-[0.375rem] px-2.5 py-1.5 text-[11px] font-medium text-[#ff6e84] transition-colors hover:brightness-125"
+              style={{ background: 'rgba(255,110,132,0.1)', border: '1px solid rgba(255,110,132,0.2)' }}
             >
-              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
-                <rect x="6" y="6" width="12" height="12" rx="1" />
-              </svg>
+              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
               <span className="hidden sm:inline">Stop</span>
             </button>
           )}
