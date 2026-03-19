@@ -6,10 +6,19 @@ export const users = sqliteTable('users', {
   supabaseId: text('supabase_id').unique().notNull(),
   email: text('email').notNull(),
   displayName: text('display_name').notNull(),
+  passwordHash: text('password_hash'), // for local auth (bcrypt)
   avatarUrl: text('avatar_url'),
   githubUsername: text('github_username'),
   githubTokenEncrypted: text('github_token_encrypted'),
+  isAdmin: integer('is_admin', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
+})
+
+// ─── System Settings ────────────────────────────────────
+export const systemSettings = sqliteTable('system_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
 })
 

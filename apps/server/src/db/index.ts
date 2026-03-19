@@ -308,6 +308,28 @@ if (config.useSqlite) {
     }
   } catch { /* table might not exist yet */ }
 
+  // Migration: add local auth columns to users
+  try {
+    const userCols = sqlite.prepare("PRAGMA table_info('users')").all() as { name: string }[]
+    if (!userCols.some((c) => c.name === 'password_hash')) {
+      sqlite.exec("ALTER TABLE users ADD COLUMN password_hash TEXT")
+      console.log('[DB] Migrated: added password_hash to users')
+    }
+    if (!userCols.some((c) => c.name === 'is_admin')) {
+      sqlite.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+      console.log('[DB] Migrated: added is_admin to users')
+    }
+  } catch { /* table might not exist yet */ }
+
+  // Create system_settings table
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `)
+
   // Migration: add auto-deploy columns to projects
   try {
     const projCols2 = sqlite.prepare("PRAGMA table_info('projects')").all() as { name: string }[]
