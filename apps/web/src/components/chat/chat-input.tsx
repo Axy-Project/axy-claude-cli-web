@@ -388,7 +388,7 @@ export const ChatInput = memo(function ChatInput({
   }, [setInputExternal, input])
 
   return (
-    <div className="border-t border-[var(--border)] bg-[var(--background)] px-3 py-3 md:px-6 md:py-4">
+    <div className="glass-panel rounded-t-[0.75rem] px-4 py-3 md:px-6 md:py-4" style={{ borderTop: '1px solid rgba(72,72,71,0.15)' }}>
       {/* Image previews */}
       {attachedImages.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
@@ -407,7 +407,7 @@ export const ChatInput = memo(function ChatInput({
       )}
 
       <div className="flex items-end gap-2">
-        <span className="mb-2.5 hidden shrink-0 font-mono text-lg font-bold text-[var(--primary)] md:inline">&#10095;</span>
+        <span className="mb-2.5 hidden shrink-0 font-mono text-lg font-bold text-[#bd9dff] md:inline">&#10095;</span>
         <div className="relative min-w-0 flex-1">
           {/* Slash command autocomplete */}
           <SlashCommandMenu
@@ -460,8 +460,8 @@ export const ChatInput = memo(function ChatInput({
             onDragOver={handleDragOver}
             placeholder={isListening ? 'Listening...' : 'Message... (⌘/Ctrl+Enter)'}
             rows={1}
-            className={`w-full resize-none rounded-lg border bg-[var(--secondary)]/50 px-3 py-2 pr-16 text-base text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)]/50 focus:bg-[var(--secondary)] md:px-4 md:py-2.5 md:text-sm ${isListening ? 'border-red-500/50 bg-red-500/5' : 'border-[var(--border)]'}`}
-            style={{ maxHeight: '120px' }}
+            className={`w-full resize-none rounded-[0.375rem] px-4 py-3 pr-20 text-[15px] text-white outline-none transition-colors placeholder:text-[#adaaaa]/50 focus:ring-1 focus:ring-[#bd9dff]/50 md:text-sm ${isListening ? 'ring-1 ring-red-500/50 bg-red-500/5' : ''}`}
+            style={{ background: '#000000', border: '1px solid rgba(72,72,71,0.2)', maxHeight: '120px' }}
           />
           {/* Input action buttons */}
           <div className="absolute bottom-2.5 right-2 flex items-center gap-1">
@@ -500,8 +500,8 @@ export const ChatInput = memo(function ChatInput({
         <button
           onClick={handleSend}
           disabled={!input.trim() && attachedImages.length === 0}
-          className="shrink-0 self-end rounded-lg bg-[var(--primary)] text-sm font-medium text-white transition-all hover:opacity-90 disabled:opacity-30"
-          style={{ width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          className="shrink-0 self-end rounded-[0.375rem] text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-30"
+          style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

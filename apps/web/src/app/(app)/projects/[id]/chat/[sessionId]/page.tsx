@@ -529,19 +529,25 @@ function MarkdownContent({ content }: { content: string }) {
 const UserMessageView = memo(function UserMessageView({ msg }: { msg: Message }) {
   const text = msg.contentJson.find((b) => b.type === 'text')?.text || ''
   const images = msg.contentJson.filter((b) => b.type === 'image')
+  const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   return (
-    <div className="group flex items-start gap-3 py-3">
-      <span className="mt-0.5 shrink-0 font-mono text-lg font-bold text-[var(--primary)]">
-        &#10095;
-      </span>
-      <div className="min-w-0 flex-1">
-        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-[var(--foreground)]">
+    <div className="py-4">
+      {/* Label */}
+      <div className="mb-3 text-right">
+        <span className="font-label text-[10px] font-semibold uppercase tracking-widest text-[#adaaaa]">
+          USER // LOCALHOST
+          <span className="ml-2 text-[#adaaaa]/50">{time}</span>
+        </span>
+      </div>
+      {/* Message bubble */}
+      <div className="rounded-[0.75rem] bg-[#1a1a1a] px-6 py-5" style={{ borderLeft: '2px solid rgba(189,157,255,0.3)' }}>
+        <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-[#e0e0e0]">
           {text}
         </pre>
         {images.length > 0 && (
-          <div className="mt-1 flex gap-1">
+          <div className="mt-3 flex gap-2">
             {images.map((img, i) => (
-              <span key={i} className="inline-flex items-center gap-1 rounded bg-[var(--secondary)] px-2 py-0.5 text-[10px] text-[var(--muted-foreground)]">
+              <span key={i} className="inline-flex items-center gap-1 rounded-sm bg-[#262626] px-2 py-1 text-[10px] text-[#adaaaa]">
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -551,9 +557,6 @@ const UserMessageView = memo(function UserMessageView({ msg }: { msg: Message })
           </div>
         )}
       </div>
-      <span className="shrink-0 text-[10px] text-[var(--muted-foreground)] opacity-0 transition-opacity group-hover:opacity-100">
-        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </span>
     </div>
   )
 })
@@ -666,34 +669,49 @@ const AssistantMessageView = memo(function AssistantMessageView({ msg }: { msg: 
     return { thinkingBlocks: thinking, textBlocks: text, toolCallPairs: tools }
   }, [blocks, msg.toolCallsJson, msg.thinkingJson])
 
+  const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const modelLabel = msg.model?.replace('claude-', '').replace(/-\d+$/, '').toUpperCase() || 'CLAUDE'
+
   return (
-    <div className="py-3 pl-1">
-      {/* Thinking */}
-      {thinkingBlocks.map((tb, i) => (
-        <ThinkingBlockView key={`t-${i}`} thinking={tb.thinking} durationMs={tb.durationMs} />
-      ))}
+    <div className="py-4">
+      {/* Label */}
+      <div className="mb-3 flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-[#3bfb8c]" />
+        <span className="font-label text-[10px] font-semibold uppercase tracking-widest text-[#adaaaa]">
+          CLAUDE // {modelLabel}
+          <span className="ml-2 text-[#adaaaa]/50">{time}</span>
+        </span>
+      </div>
 
-      {/* Tool calls - unified summary bar */}
-      {toolCallPairs.length > 0 && (
-        <ToolCallsSummary toolCalls={toolCallPairs} />
-      )}
+      {/* Message content */}
+      <div className="rounded-[0.75rem] bg-[#131313] px-6 py-5" style={{ borderLeft: '2px solid rgba(59,251,140,0.3)' }}>
+        {/* Thinking */}
+        {thinkingBlocks.map((tb, i) => (
+          <ThinkingBlockView key={`t-${i}`} thinking={tb.thinking} durationMs={tb.durationMs} />
+        ))}
 
-      {/* Text content */}
-      {textBlocks.length > 0 ? (
-        textBlocks.map((text, i) => (
-          <div key={`txt-${i}`} className="mb-3">
-            <MarkdownContent content={text} />
-          </div>
-        ))
-      ) : toolCallPairs.length > 0 && thinkingBlocks.length === 0 ? (
-        <p className="text-xs italic text-[var(--muted-foreground)]">
-          Executed {toolCallPairs.length} tool{toolCallPairs.length > 1 ? 's' : ''} (expand above to see details)
-        </p>
-      ) : null}
+        {/* Tool calls */}
+        {toolCallPairs.length > 0 && (
+          <ToolCallsSummary toolCalls={toolCallPairs} />
+        )}
+
+        {/* Text content */}
+        {textBlocks.length > 0 ? (
+          textBlocks.map((text, i) => (
+            <div key={`txt-${i}`} className="mb-3">
+              <MarkdownContent content={text} />
+            </div>
+          ))
+        ) : toolCallPairs.length > 0 && thinkingBlocks.length === 0 ? (
+          <p className="text-xs italic text-[#adaaaa]/60">
+            Executed {toolCallPairs.length} tool{toolCallPairs.length > 1 ? 's' : ''} (expand above to see details)
+          </p>
+        ) : null}
+      </div>
 
       {/* Token usage footer */}
       {(msg.inputTokens !== undefined || msg.outputTokens !== undefined) && (
-        <div className="mt-1 flex items-center gap-3 text-[10px] text-[var(--muted-foreground)]">
+        <div className="mt-2 flex items-center gap-3 pl-1 font-label text-[10px] text-[#adaaaa]/60">
           {msg.inputTokens !== undefined && (
             <span>{formatTokens(msg.inputTokens)} input</span>
           )}
@@ -1714,15 +1732,15 @@ export default function ChatSessionPage() {
     <SplitTerminal projectId={projectId}>
     <div className="flex h-full flex-col overflow-hidden">
       {/* Session header */}
-      <div className="mb-2 flex items-start justify-between gap-2 border-b border-[var(--border)] pb-2 md:mb-3 md:items-center md:pb-3">
+      <div className="mb-3 flex items-start justify-between gap-2 pb-3 md:mb-4 md:items-center md:pb-4" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
         <div className="flex min-w-0 items-start gap-2 md:items-center md:gap-3">
-          <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--primary)]/15 sm:flex">
-            <svg className="h-4 w-4 text-[var(--primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-[0.375rem] sm:flex" style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}>
+            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold text-[var(--foreground)]">
+            <h1 className="truncate font-headline text-sm font-semibold tracking-tight text-white">
               {currentSession?.title || 'Chat Session'}
             </h1>
             {currentSession?.parentSessionId && parentSessionTitle && (
