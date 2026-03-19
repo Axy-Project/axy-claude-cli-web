@@ -1,3 +1,8 @@
+# =============================================================================
+# Axy Web - Docker Compose (build from source)
+# For pre-built images, use docker-compose.prod.yml instead
+# =============================================================================
+
 services:
   db:
     image: postgres:16-alpine
@@ -27,14 +32,11 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://${DB_USER:-axy}:${DB_PASSWORD}@db:5432/axy
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       PROJECTS_DIR: /data/projects
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3457}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
     volumes:
       - projects:/data/projects
     ports:
@@ -44,19 +46,11 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-      args:
-        - NEXT_PUBLIC_API_URL=${PUBLIC_API_URL:-http://localhost:3456}
-        - NEXT_PUBLIC_WS_URL=${PUBLIC_WS_URL:-ws://localhost:3456}
-        - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
-        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
     restart: unless-stopped
     depends_on:
       - server
     environment:
-      NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:3456}
-      NEXT_PUBLIC_WS_URL: ${PUBLIC_WS_URL:-ws://localhost:3456}
-      NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      HOSTNAME: 0.0.0.0
     ports:
       - "${WEB_PORT:-3457}:3457"
 

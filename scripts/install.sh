@@ -38,22 +38,23 @@ curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/.env.exampl
 # Create .env if it doesn't exist
 if [ ! -f .env ]; then
   cp .env.example .env
-  # Generate random JWT secret
+
+  # Generate random secrets
   JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | od -An -tx1 | tr -d ' \n')
   DB_PASSWORD=$(openssl rand -hex 16 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
 
-  sed -i.bak "s|JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET|" .env 2>/dev/null || \
-    sed -i '' "s|JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET|" .env
-  sed -i.bak "s|DB_PASSWORD=.*|DB_PASSWORD=$DB_PASSWORD|" .env 2>/dev/null || \
-    sed -i '' "s|DB_PASSWORD=.*|DB_PASSWORD=$DB_PASSWORD|" .env
-  rm -f .env.bak
+  # Replace in .env (macOS + Linux compatible)
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "s|DB_PASSWORD=change_me_to_random_string|DB_PASSWORD=$DB_PASSWORD|g" .env
+    sed -i '' "s|JWT_SECRET=change_me_to_random_string_min_32_chars|JWT_SECRET=$JWT_SECRET|g" .env
+    sed -i '' "s|DATABASE_URL=postgres://axy:change_me_to_random_string@|DATABASE_URL=postgres://axy:$DB_PASSWORD@|g" .env
+  else
+    sed -i "s|DB_PASSWORD=change_me_to_random_string|DB_PASSWORD=$DB_PASSWORD|g" .env
+    sed -i "s|JWT_SECRET=change_me_to_random_string_min_32_chars|JWT_SECRET=$JWT_SECRET|g" .env
+    sed -i "s|DATABASE_URL=postgres://axy:change_me_to_random_string@|DATABASE_URL=postgres://axy:$DB_PASSWORD@|g" .env
+  fi
 
-  echo "🔑 Generated random JWT_SECRET and DB_PASSWORD"
-  echo ""
-  echo "⚠️  Edit $INSTALL_DIR/.env to add your Supabase keys:"
-  echo "   SUPABASE_URL=https://your-project.supabase.co"
-  echo "   SUPABASE_ANON_KEY=your-anon-key"
-  echo ""
+  echo "🔑 Generated random secrets"
 fi
 
 # Pull and start
@@ -63,18 +64,28 @@ docker compose pull
 echo "🚀 Starting Axy Web..."
 docker compose up -d
 
+# Wait for services
+echo "⏳ Waiting for services..."
+sleep 5
+
+# Get server IP
+SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+
 echo ""
 echo "  ✅ Axy Web is running!"
 echo ""
-echo "  🌐 Open: http://localhost:3457"
-echo "  📦 API:  http://localhost:3456"
+echo "  🌐 Open: http://${SERVER_IP}:3457"
+echo "  📦 API:  http://${SERVER_IP}:3456"
+echo ""
+echo "  First time? The setup wizard will guide you."
+echo "  Create your admin account and sign in to Claude."
 echo ""
 echo "  📁 Data: $INSTALL_DIR"
-echo "  🔄 Auto-updates enabled via Watchtower"
+echo "  🔄 Auto-updates enabled (Watchtower checks every 5 min)"
 echo ""
 echo "  Commands:"
 echo "    cd $INSTALL_DIR"
-echo "    docker compose logs -f        # View logs"
-echo "    docker compose pull && docker compose up -d  # Manual update"
-echo "    docker compose down            # Stop"
+echo "    docker compose logs -f          # View logs"
+echo "    docker compose pull && up -d    # Manual update"
+echo "    docker compose down             # Stop"
 echo ""
