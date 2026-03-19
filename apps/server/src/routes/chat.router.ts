@@ -82,14 +82,23 @@ router.post('/send', async (req: AuthenticatedRequest, res) => {
       }
     }
 
-    // Check that Claude API key is available
+    // Check that Claude auth is available (API key OR CLI login)
     const claudeApiKey = await accountService.resolveClaudeApiKey(req.userId!, session.projectId)
     if (!claudeApiKey && !process.env.ANTHROPIC_API_KEY) {
-      res.status(400).json({
-        success: false,
-        error: 'No Claude API key configured. Add one in Settings > Claude API Keys, or set ANTHROPIC_API_KEY environment variable.',
-      })
-      return
+      // Check if CLI is logged in
+      let cliLoggedIn = false
+      try {
+        const { execSync } = await import('child_process')
+        const result = execSync('claude auth status', { timeout: 3000, encoding: 'utf-8', env: { ...process.env, NO_COLOR: '1' } })
+        cliLoggedIn = JSON.parse(result).loggedIn === true
+      } catch { /* CLI not available */ }
+      if (!cliLoggedIn) {
+        res.status(400).json({
+          success: false,
+          error: 'Claude not configured. Sign in from Settings or run "claude auth login" in the terminal.',
+        })
+        return
+      }
     }
 
     // Auto-subscribe user's WS connections to this session BEFORE emitting events

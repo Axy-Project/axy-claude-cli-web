@@ -9,10 +9,9 @@ export default function SetupPage() {
   const router = useRouter()
   const [step, setStep] = useState<'welcome' | 'create' | 'claude'>('welcome')
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', displayName: '' })
-  const [claudeKey, setClaudeKey] = useState('')
-  const [claudeKeyNickname, setClaudeKeyNickname] = useState('Default')
-  const [isTestingKey, setIsTestingKey] = useState(false)
-  const [keyValid, setKeyValid] = useState<boolean | null>(null)
+  const [loginUrl, setLoginUrl] = useState<string | null>(null)
+  const [loginStatus, setLoginStatus] = useState<string>('none')
+  const [cliEmail, setCliEmail] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -171,94 +170,102 @@ export default function SetupPage() {
           </form>
         ) : step === 'claude' ? (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-            <h2 className="text-lg font-semibold">Connect Claude</h2>
+            <h2 className="text-lg font-semibold">Sign in to Claude</h2>
             <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              Add your Anthropic API key to start chatting. You can get one from{' '}
-              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-[var(--primary)] underline">
-                console.anthropic.com
-              </a>
+              Connect your Claude account to start chatting. This uses the same login as the Claude CLI.
             </p>
 
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium">API Key</label>
-                <input
-                  type="password"
-                  value={claudeKey}
-                  onChange={(e) => { setClaudeKey(e.target.value); setKeyValid(null) }}
-                  placeholder="sk-ant-..."
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 font-mono text-sm outline-none focus:border-[var(--primary)]"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Nickname</label>
-                <input
-                  type="text"
-                  value={claudeKeyNickname}
-                  onChange={(e) => setClaudeKeyNickname(e.target.value)}
-                  placeholder="Default"
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
-                />
-              </div>
-
-              {keyValid === true && (
-                <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-400">
-                  API key is valid
+            {loginStatus === 'success' || cliEmail ? (
+              <div className="mt-4 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-green-400" />
+                  <span className="text-sm font-medium text-green-400">Connected</span>
                 </div>
-              )}
-              {keyValid === false && (
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-                  Invalid API key. Check and try again.
+                {cliEmail && <p className="mt-1 text-xs text-[var(--muted-foreground)]">{cliEmail}</p>}
+              </div>
+            ) : loginStatus === 'awaiting_auth' && loginUrl ? (
+              <div className="mt-4 space-y-3">
+                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3">
+                  <p className="text-sm font-medium text-yellow-400">Waiting for authorization...</p>
+                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">Click the link below to sign in with your Claude account:</p>
                 </div>
-              )}
-            </div>
+                <a
+                  href={loginUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full rounded-lg bg-[#d97706] px-4 py-2.5 text-center text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Open Claude Login Page
+                </a>
+                <p className="text-center text-[10px] text-[var(--muted-foreground)]">
+                  After authorizing, come back here. This page will detect the login automatically.
+                </p>
+              </div>
+            ) : null}
 
             <div className="mt-6 flex gap-2">
-              <button
-                onClick={async () => {
-                  if (!claudeKey.trim()) return
-                  setIsTestingKey(true)
-                  try {
-                    const result = await api.post<{ valid: boolean; error?: string }>('/api/claude/test-key', { apiKey: claudeKey })
-                    setKeyValid(result.valid)
-                  } catch { setKeyValid(false) }
-                  finally { setIsTestingKey(false) }
-                }}
-                disabled={isTestingKey || !claudeKey.trim()}
-                className="rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--secondary)] disabled:opacity-50"
-              >
-                {isTestingKey ? 'Testing...' : 'Test Key'}
-              </button>
+              {loginStatus !== 'success' && !cliEmail && (
+                <button
+                  onClick={async () => {
+                    setIsSubmitting(true)
+                    setError(null)
+                    try {
+                      // Check if already logged in
+                      const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
+                      if (status.cliLoggedIn && status.cliEmail) {
+                        setCliEmail(status.cliEmail)
+                        setLoginStatus('success')
+                        return
+                      }
+                      // Start login flow
+                      const result = await api.post<{ url: string | null; status: string }>('/api/claude/login', {})
+                      if (result.url) {
+                        setLoginUrl(result.url)
+                        setLoginStatus('awaiting_auth')
+                        // Poll for completion
+                        const poll = setInterval(async () => {
+                          try {
+                            const s = await api.get<{ status: string; email?: string }>('/api/claude/login/status')
+                            if (s.status === 'success') {
+                              clearInterval(poll)
+                              setLoginStatus('success')
+                              setCliEmail(s.email || null)
+                            }
+                          } catch { /* ignore */ }
+                        }, 2000)
+                        // Stop polling after 5 minutes
+                        setTimeout(() => clearInterval(poll), 300000)
+                      } else {
+                        setError('Could not start Claude login. Is the CLI installed?')
+                      }
+                    } catch (err) {
+                      setError((err as Error).message)
+                    } finally { setIsSubmitting(false) }
+                  }}
+                  disabled={isSubmitting || loginStatus === 'awaiting_auth'}
+                  className="flex-1 rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Connecting...' : loginStatus === 'awaiting_auth' ? 'Waiting...' : 'Sign in to Claude'}
+                </button>
+              )}
 
               <button
-                onClick={async () => {
-                  if (!claudeKey.trim()) { router.push('/dashboard'); return }
-                  setIsSubmitting(true)
-                  try {
-                    await api.post('/api/accounts', {
-                      type: 'claude_api_key',
-                      nickname: claudeKeyNickname || 'Default',
-                      token: claudeKey,
-                      isDefault: true,
-                    })
-                    router.push('/dashboard')
-                  } catch (err) {
-                    setError((err as Error).message)
-                  } finally { setIsSubmitting(false) }
-                }}
-                disabled={isSubmitting}
-                className="flex-1 rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                onClick={() => router.push('/dashboard')}
+                className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity hover:opacity-90 ${
+                  loginStatus === 'success' || cliEmail
+                    ? 'flex-1 bg-[var(--primary)] text-white'
+                    : 'border border-[var(--border)] text-[var(--muted-foreground)]'
+                }`}
               >
-                {isSubmitting ? 'Saving...' : claudeKey.trim() ? 'Save & Continue' : 'Skip for now'}
+                {loginStatus === 'success' || cliEmail ? 'Continue to Dashboard' : 'Skip for now'}
               </button>
             </div>
 
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="mt-2 w-full text-center text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-            >
-              Skip — I will add it later in Settings
-            </button>
+            {error && (
+              <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                {error}
+              </p>
+            )}
           </div>
         ) : null}
       </div>

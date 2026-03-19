@@ -61,24 +61,44 @@ export class SetupService {
     const { generateToken } = await import('../middleware/auth.js')
 
     const passwordHash = hashPassword(password)
-    const userId = crypto.randomUUID()
 
-    const [user] = await db
-      .insert(schema.users)
-      .values({
-        id: userId,
-        supabaseId: `local-${userId}`,
-        email,
-        displayName,
-        passwordHash,
-        isAdmin: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning()
+    // Check if user already exists (e.g. from GitHub OAuth)
+    const [existing] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1)
+
+    let user: any
+    if (existing) {
+      // Update existing user with password + admin
+      const [updated] = await db
+        .update(schema.users)
+        .set({ passwordHash, isAdmin: true, displayName, updatedAt: new Date() })
+        .where(eq(schema.users.id, existing.id))
+        .returning()
+      user = updated
+    } else {
+      // Create new user
+      const userId = crypto.randomUUID()
+      const [created] = await db
+        .insert(schema.users)
+        .values({
+          id: userId,
+          supabaseId: `local-${userId}`,
+          email,
+          displayName,
+          passwordHash,
+          isAdmin: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning()
+      user = created
+    }
 
     await this.setSetting('setup_complete', 'true')
-    await this.setSetting('auth_method', 'local') // local, github, both
+    await this.setSetting('auth_method', 'local')
 
     const token = generateToken(user.id, user.email)
     return { token, user: { id: user.id, email: user.email, displayName: user.displayName, isAdmin: true } }
@@ -88,12 +108,13 @@ export class SetupService {
   async loginLocal(email: string, password: string): Promise<{ token: string; user: any } | null> {
     const { generateToken } = await import('../middleware/auth.js')
 
-    const [user] = await db
+    // Find user with a password hash (skip OAuth-only users)
+    const users = await db
       .select()
       .from(schema.users)
       .where(eq(schema.users.email, email))
-      .limit(1)
 
+    const user = users.find((u: any) => u.passwordHash) || users[0]
     if (!user || !user.passwordHash) return null
     if (!verifyPassword(password, user.passwordHash)) return null
 
