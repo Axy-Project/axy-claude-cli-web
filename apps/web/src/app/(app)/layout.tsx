@@ -71,13 +71,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {wsState.isReconnecting && (
-          <div className="flex items-center justify-center gap-2 bg-yellow-500/90 px-3 py-1.5 text-xs font-medium text-black">
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-black" />
+          <div className="flex items-center justify-center gap-2 bg-[var(--primary-dim)] px-3 py-1.5 text-xs font-medium text-white">
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white" />
             Reconnecting... (attempt {wsState.reconnectAttempt})
           </div>
         )}
         <Topbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 overflow-auto p-3 md:p-6">
+        <main className="custom-scrollbar flex-1 overflow-auto p-4 md:p-8">
           {children}
         </main>
       </div>

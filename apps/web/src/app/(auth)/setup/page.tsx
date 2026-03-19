@@ -56,218 +56,314 @@ export default function SetupPage() {
     }
   }
 
+  const steps = [
+    { key: 'welcome', label: 'Welcome' },
+    { key: 'create', label: 'Account' },
+    { key: 'claude', label: 'Claude' },
+  ]
+  const currentStepIdx = steps.findIndex((s) => s.key === step)
+
+  const inputClassName = "w-full rounded-[0.375rem] px-4 py-2.5 text-sm text-white outline-none placeholder:text-[#adaaaa]/50 focus:ring-1 focus:ring-[#bd9dff]"
+  const inputStyle = {
+    background: '#000000',
+    border: '1px solid rgba(72, 72, 71, 0.2)',
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-4">
+    <div className="flex min-h-screen items-center justify-center p-4" style={{ background: '#0e0e0e', fontFamily: 'Inter, sans-serif' }}>
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--primary)]">
-            <span className="text-2xl font-bold text-white">A</span>
+        <div className="mb-6 text-center">
+          <div
+            className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-[0.75rem]"
+            style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+          >
+            <span className="text-2xl font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>A</span>
           </div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Axy Web</h1>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">Claude CLI from your browser</p>
+          <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+            Axy Web
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: '#adaaaa' }}>Claude CLI from your browser</p>
         </div>
 
-        {step === 'welcome' ? (
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-            <h2 className="text-lg font-semibold">Welcome to Axy</h2>
-            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-              Set up your Axy instance. Create an admin account to get started.
-            </p>
-            <div className="mt-6 space-y-3 text-sm text-[var(--muted-foreground)]">
-              <div className="flex items-start gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)]/15 text-xs font-bold text-[var(--primary)]">1</span>
-                <span>Create your admin account</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--secondary)] text-xs font-bold text-[var(--muted-foreground)]">2</span>
-                <span>Start creating projects and chatting with Claude</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--secondary)] text-xs font-bold text-[var(--muted-foreground)]">3</span>
-                <span>Optionally connect GitHub, configure OAuth, and more from Settings</span>
-              </div>
-            </div>
-            <button
-              onClick={() => setStep('create')}
-              className="mt-6 w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-            >
-              Get Started
-            </button>
-          </div>
-        ) : step === 'create' ? (
-          <form onSubmit={handleSetup} className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-            <h2 className="text-lg font-semibold">Create Admin Account</h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              This will be the main administrator of your Axy instance.
-            </p>
-
-            {error && (
-              <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-                {error}
-              </div>
-            )}
-
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium">Display Name</label>
-                <input
-                  type="text"
-                  value={form.displayName}
-                  onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-                  placeholder="Admin"
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Email</label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="admin@example.com"
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Password</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="Min 8 characters"
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Confirm Password</label>
-                <input
-                  type="password"
-                  value={form.confirmPassword}
-                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                  placeholder="Repeat password"
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="mt-6 w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {isSubmitting ? 'Creating...' : 'Create Account & Start'}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStep('welcome')}
-              className="mt-2 w-full text-center text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-            >
-              Back
-            </button>
-          </form>
-        ) : step === 'claude' ? (
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-            <h2 className="text-lg font-semibold">Sign in to Claude</h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              Connect your Claude account to start chatting. This uses the same login as the Claude CLI.
-            </p>
-
-            {loginStatus === 'success' || cliEmail ? (
-              <div className="mt-4 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-green-400" />
-                  <span className="text-sm font-medium text-green-400">Connected</span>
-                </div>
-                {cliEmail && <p className="mt-1 text-xs text-[var(--muted-foreground)]">{cliEmail}</p>}
-              </div>
-            ) : loginStatus === 'awaiting_auth' && loginUrl ? (
-              <div className="mt-4 space-y-3">
-                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3">
-                  <p className="text-sm font-medium text-yellow-400">Waiting for authorization...</p>
-                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">Click the link below to sign in with your Claude account:</p>
-                </div>
-                <a
-                  href={loginUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full rounded-lg bg-[#d97706] px-4 py-2.5 text-center text-sm font-medium text-white transition-opacity hover:opacity-90"
-                >
-                  Open Claude Login Page
-                </a>
-                <p className="text-center text-[10px] text-[var(--muted-foreground)]">
-                  After authorizing, come back here. This page will detect the login automatically.
-                </p>
-              </div>
-            ) : null}
-
-            <div className="mt-6 flex gap-2">
-              {loginStatus !== 'success' && !cliEmail && (
-                <button
-                  onClick={async () => {
-                    setIsSubmitting(true)
-                    setError(null)
-                    try {
-                      // Check if already logged in
-                      const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
-                      if (status.cliLoggedIn && status.cliEmail) {
-                        setCliEmail(status.cliEmail)
-                        setLoginStatus('success')
-                        return
-                      }
-                      // Start login flow
-                      const result = await api.post<{ url: string | null; status: string }>('/api/claude/login', {})
-                      if (result.url) {
-                        setLoginUrl(result.url)
-                        setLoginStatus('awaiting_auth')
-                        // Poll for completion
-                        const poll = setInterval(async () => {
-                          try {
-                            const s = await api.get<{ status: string; email?: string }>('/api/claude/login/status')
-                            if (s.status === 'success') {
-                              clearInterval(poll)
-                              setLoginStatus('success')
-                              setCliEmail(s.email || null)
-                            }
-                          } catch { /* ignore */ }
-                        }, 2000)
-                        // Stop polling after 5 minutes
-                        setTimeout(() => clearInterval(poll), 300000)
-                      } else {
-                        setError('Could not start Claude login. Is the CLI installed?')
-                      }
-                    } catch (err) {
-                      setError((err as Error).message)
-                    } finally { setIsSubmitting(false) }
-                  }}
-                  disabled={isSubmitting || loginStatus === 'awaiting_auth'}
-                  className="flex-1 rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Connecting...' : loginStatus === 'awaiting_auth' ? 'Waiting...' : 'Sign in to Claude'}
-                </button>
-              )}
-
-              <button
-                onClick={() => router.push('/dashboard')}
-                className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity hover:opacity-90 ${
-                  loginStatus === 'success' || cliEmail
-                    ? 'flex-1 bg-[var(--primary)] text-white'
-                    : 'border border-[var(--border)] text-[var(--muted-foreground)]'
-                }`}
+        {/* Steps indicator */}
+        <div className="mb-6 flex items-center justify-center gap-2">
+          {steps.map((s, i) => (
+            <div key={s.key} className="flex items-center gap-2">
+              <div
+                className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors"
+                style={{
+                  background: i <= currentStepIdx ? 'linear-gradient(135deg, #bd9dff, #8a4cfc)' : '#262626',
+                  color: i <= currentStepIdx ? '#ffffff' : '#adaaaa',
+                }}
               >
-                {loginStatus === 'success' || cliEmail ? 'Continue to Dashboard' : 'Skip for now'}
+                {i + 1}
+              </div>
+              <span
+                className="hidden text-xs font-medium sm:inline"
+                style={{ color: i <= currentStepIdx ? '#ffffff' : '#adaaaa' }}
+              >
+                {s.label}
+              </span>
+              {i < steps.length - 1 && (
+                <div className="mx-1 h-px w-6" style={{ background: i < currentStepIdx ? '#bd9dff' : 'rgba(72, 72, 71, 0.2)' }} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Glassmorphism card */}
+        <div
+          className="rounded-[0.75rem] backdrop-blur-xl"
+          style={{
+            background: 'rgba(26, 26, 26, 0.8)',
+            border: '1px solid rgba(72, 72, 71, 0.2)',
+          }}
+        >
+          {step === 'welcome' ? (
+            <div className="p-6">
+              <h2 className="text-lg font-semibold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Welcome to Axy</h2>
+              <p className="mt-2 text-sm" style={{ color: '#adaaaa' }}>
+                Set up your Axy instance. Create an admin account to get started.
+              </p>
+              <div className="mt-6 space-y-3 text-sm" style={{ color: '#adaaaa' }}>
+                <div className="flex items-start gap-3">
+                  <span
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                    style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+                  >
+                    1
+                  </span>
+                  <span>Create your admin account</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                    style={{ background: '#262626', color: '#adaaaa' }}
+                  >
+                    2
+                  </span>
+                  <span>Start creating projects and chatting with Claude</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                    style={{ background: '#262626', color: '#adaaaa' }}
+                  >
+                    3
+                  </span>
+                  <span>Optionally connect GitHub, configure OAuth, and more from Settings</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setStep('create')}
+                className="mt-6 w-full rounded-[0.375rem] px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110"
+                style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+              >
+                Get Started
               </button>
             </div>
 
-            {error && (
-              <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-                {error}
+          ) : step === 'create' ? (
+            <form onSubmit={handleSetup} className="p-6">
+              <h2 className="text-lg font-semibold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Create Admin Account</h2>
+              <p className="mt-1 text-sm" style={{ color: '#adaaaa' }}>
+                This will be the main administrator of your Axy instance.
               </p>
-            )}
-          </div>
-        ) : null}
+
+              {error && (
+                <div
+                  className="mt-4 rounded-[0.375rem] px-3 py-2 text-sm text-red-400"
+                  style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                >
+                  {error}
+                </div>
+              )}
+
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-white">Display Name</label>
+                  <input
+                    type="text"
+                    value={form.displayName}
+                    onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+                    placeholder="Admin"
+                    className={inputClassName}
+                    style={inputStyle}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-white">Email</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="admin@example.com"
+                    className={inputClassName}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-white">Password</label>
+                  <input
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder="Min 8 characters"
+                    className={inputClassName}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-white">Confirm Password</label>
+                  <input
+                    type="password"
+                    value={form.confirmPassword}
+                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                    placeholder="Repeat password"
+                    className={inputClassName}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-6 w-full rounded-[0.375rem] px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100"
+                style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+              >
+                {isSubmitting ? 'Creating...' : 'Create Account & Continue'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStep('welcome')}
+                className="mt-3 w-full text-center text-xs transition-colors hover:text-white"
+                style={{ color: '#adaaaa' }}
+              >
+                Back
+              </button>
+            </form>
+
+          ) : step === 'claude' ? (
+            <div className="p-6">
+              <h2 className="text-lg font-semibold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Sign in to Claude</h2>
+              <p className="mt-1 text-sm" style={{ color: '#adaaaa' }}>
+                Connect your Claude account to start chatting. This uses the same login as the Claude CLI.
+              </p>
+
+              {loginStatus === 'success' || cliEmail ? (
+                <div
+                  className="mt-4 rounded-[0.375rem] px-4 py-3"
+                  style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-green-400" />
+                    <span className="text-sm font-medium text-green-400">Connected</span>
+                  </div>
+                  {cliEmail && <p className="mt-1 text-xs" style={{ color: '#adaaaa' }}>{cliEmail}</p>}
+                </div>
+              ) : loginStatus === 'awaiting_auth' && loginUrl ? (
+                <div className="mt-4 space-y-3">
+                  <div
+                    className="rounded-[0.375rem] px-4 py-3"
+                    style={{ background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.25)' }}
+                  >
+                    <p className="text-sm font-medium text-amber-400">Waiting for authorization...</p>
+                    <p className="mt-1 text-xs" style={{ color: '#adaaaa' }}>Click the link below to sign in with your Claude account:</p>
+                  </div>
+                  <a
+                    href={loginUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full rounded-[0.375rem] px-4 py-2.5 text-center text-sm font-medium text-white transition-all hover:brightness-110"
+                    style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+                  >
+                    Open Claude Login Page
+                  </a>
+                  <p className="text-center text-[10px]" style={{ color: '#adaaaa' }}>
+                    After authorizing, come back here. This page will detect the login automatically.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="mt-6 flex gap-2">
+                {loginStatus !== 'success' && !cliEmail && (
+                  <button
+                    onClick={async () => {
+                      setIsSubmitting(true)
+                      setError(null)
+                      try {
+                        // Check if already logged in
+                        const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
+                        if (status.cliLoggedIn && status.cliEmail) {
+                          setCliEmail(status.cliEmail)
+                          setLoginStatus('success')
+                          return
+                        }
+                        // Start login flow
+                        const result = await api.post<{ url: string | null; status: string }>('/api/claude/login', {})
+                        if (result.url) {
+                          setLoginUrl(result.url)
+                          setLoginStatus('awaiting_auth')
+                          // Poll for completion
+                          const poll = setInterval(async () => {
+                            try {
+                              const s = await api.get<{ status: string; email?: string }>('/api/claude/login/status')
+                              if (s.status === 'success') {
+                                clearInterval(poll)
+                                setLoginStatus('success')
+                                setCliEmail(s.email || null)
+                              }
+                            } catch { /* ignore */ }
+                          }, 2000)
+                          // Stop polling after 5 minutes
+                          setTimeout(() => clearInterval(poll), 300000)
+                        } else {
+                          setError('Could not start Claude login. Is the CLI installed?')
+                        }
+                      } catch (err) {
+                        setError((err as Error).message)
+                      } finally { setIsSubmitting(false) }
+                    }}
+                    disabled={isSubmitting || loginStatus === 'awaiting_auth'}
+                    className="flex-1 rounded-[0.375rem] px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100"
+                    style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+                  >
+                    {isSubmitting ? 'Connecting...' : loginStatus === 'awaiting_auth' ? 'Waiting...' : 'Sign in to Claude'}
+                  </button>
+                )}
+
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className={`rounded-[0.375rem] px-4 py-2.5 text-sm font-medium transition-all ${
+                    loginStatus === 'success' || cliEmail
+                      ? 'flex-1 text-white hover:brightness-110'
+                      : 'hover:text-white'
+                  }`}
+                  style={
+                    loginStatus === 'success' || cliEmail
+                      ? { background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }
+                      : { color: '#adaaaa' }
+                  }
+                >
+                  {loginStatus === 'success' || cliEmail ? 'Continue to Dashboard' : 'Skip for now'}
+                </button>
+              </div>
+
+              {error && (
+                <p
+                  className="mt-3 rounded-[0.375rem] px-3 py-2 text-sm text-red-400"
+                  style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                >
+                  {error}
+                </p>
+              )}
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )
