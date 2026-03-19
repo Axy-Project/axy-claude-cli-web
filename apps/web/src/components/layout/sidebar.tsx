@@ -14,6 +14,11 @@ const navItems = [
   { href: '/settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
 
+const bottomItems = [
+  { href: 'https://github.com/Axy-Project/AxyWeb', label: 'Documentation', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', external: true },
+  { href: 'https://github.com/Axy-Project/AxyWeb/issues', label: 'Feedback', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z', external: true },
+]
+
 interface SidebarProps {
   open?: boolean
   onClose?: () => void
@@ -23,7 +28,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
-  // Ctrl+/ shortcut to navigate to search
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key === '/') {
@@ -40,7 +44,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {/* Mobile overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
           onClick={onClose}
         />
       )}
@@ -48,20 +52,24 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-[var(--border)] bg-[var(--card)] transition-transform duration-200 ease-in-out md:static md:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[var(--surface-low)] transition-transform duration-200 ease-in-out md:static md:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Logo */}
-        <div className="flex h-14 items-center justify-between border-b border-[var(--border)] px-4">
-          <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="Axy" className="h-7 w-auto" />
-            <span className="rounded bg-[var(--primary)] px-1.5 py-0.5 text-[10px] font-medium text-white">WEB</span>
-          </div>
-          {/* Close button - mobile only */}
+        <div className="flex h-16 items-center gap-3 px-6">
+          <Link href="/dashboard" className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--primary-dim)]">
+              <span className="font-headline text-sm font-bold text-white">A</span>
+            </div>
+            <span className="font-headline text-base font-semibold tracking-tight text-[var(--foreground)]">
+              Claude CLI
+            </span>
+          </Link>
+          {/* Close button - mobile */}
           <button
             onClick={onClose}
-            className="rounded p-1 text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] md:hidden"
+            className="ml-auto rounded-md p-1 text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] md:hidden"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -70,28 +78,28 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 p-3">
-          {/* Search link */}
+        <nav className="custom-scrollbar flex-1 space-y-0.5 overflow-y-auto px-3 pt-2">
+          {/* Search */}
           <Link
             href="/search"
             onClick={onClose}
             className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
+              'group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200',
               pathname.startsWith('/search')
-                ? 'bg-[var(--primary)] text-white'
-                : 'text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]'
+                ? 'bg-gradient-to-r from-[var(--primary)]/10 to-transparent border-r-2 border-[var(--primary)] text-[var(--foreground)]'
+                : 'text-[var(--muted-foreground)] hover:bg-[var(--surface-mid)] hover:text-[var(--foreground)]'
             )}
           >
-            <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             Search
-            <kbd className="ml-auto rounded border border-[var(--border)] bg-[var(--secondary)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--muted-foreground)]">
+            <kbd className="ml-auto rounded bg-[var(--surface-highest)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--muted-foreground)]">
               Ctrl+/
             </kbd>
           </Link>
 
-          <div className="my-2 border-t border-[var(--border)]" />
+          <div className="my-3" />
 
           {navItems.map((item) => {
             const isActive = pathname.startsWith(item.href)
@@ -101,13 +109,19 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                  'group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200',
                   isActive
-                    ? 'bg-[var(--primary)] text-white'
-                    : 'text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]'
+                    ? 'bg-gradient-to-r from-[var(--primary)]/10 to-transparent border-r-2 border-[var(--primary)] text-[var(--foreground)]'
+                    : 'text-[var(--muted-foreground)] hover:bg-[var(--surface-mid)] hover:text-[var(--foreground)]'
                 )}
               >
-                <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg
+                  className={cn(
+                    'h-[18px] w-[18px] shrink-0 transition-colors',
+                    isActive ? 'text-[var(--primary)]' : 'text-[var(--muted-foreground)] group-hover:text-[var(--foreground)]'
+                  )}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                 </svg>
                 {item.label}
@@ -115,6 +129,24 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             )
           })}
         </nav>
+
+        {/* Bottom links */}
+        <div className="space-y-0.5 px-3 pb-4 pt-2">
+          {bottomItems.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-md px-3 py-2 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+            >
+              <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+              </svg>
+              {item.label}
+            </a>
+          ))}
+        </div>
       </aside>
     </>
   )
