@@ -2,22 +2,36 @@
 
 Full-featured web interface for Claude CLI. Chat with AI, manage projects, deploy via SFTP, and more — all from your browser.
 
-## Quick Deploy (Docker)
+## Quick Install (one command)
 
 ```bash
-# 1. Clone
-git clone https://github.com/Axy-Project/AxyWeb.git
-cd AxyWeb
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/scripts/install.sh | bash
+```
 
-# 2. Configure
-cp .env.example .env
-# Edit .env with your keys (see below)
+This downloads the production Docker images, generates secrets, and starts everything. Open `http://localhost:3457`.
 
-# 3. Deploy
+## Manual Deploy
+
+```bash
+# Download compose file
+mkdir axy-web && cd axy-web
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/docker-compose.prod.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/.env.example -o .env
+
+# Edit .env with your keys
+nano .env
+
+# Start
 docker compose up -d
 ```
 
 Open `http://localhost:3457`
+
+## Auto-Updates
+
+Axy uses **Watchtower** to auto-update. When a new version is pushed to `main`, GitHub Actions builds new Docker images. Watchtower checks every 5 minutes and automatically updates your containers with zero downtime.
+
+Manual update: `docker compose pull && docker compose up -d`
 
 ## Environment Variables
 
