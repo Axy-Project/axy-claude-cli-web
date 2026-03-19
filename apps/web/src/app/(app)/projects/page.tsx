@@ -62,10 +62,10 @@ function GitHubIcon() {
 /* ───────────────────── Permission mode colors ────────────────────── */
 
 const permissionColors: Record<string, string> = {
-  default: 'bg-blue-500/15 text-blue-400',
-  accept_edits: 'bg-amber-500/15 text-amber-400',
-  plan: 'bg-emerald-500/15 text-emerald-400',
-  bypass: 'bg-red-500/15 text-red-400',
+  default: 'bg-[#bd9dff]/10 text-[#bd9dff] border border-[#bd9dff]/20',
+  accept_edits: 'bg-[#ffa5d9]/10 text-[#ffa5d9] border border-[#ffa5d9]/20',
+  plan: 'bg-[#3bfb8c]/10 text-[#3bfb8c] border border-[#3bfb8c]/20',
+  bypass: 'bg-[#ff6e84]/10 text-[#ff6e84] border border-[#ff6e84]/20',
 }
 
 const permissionLabels: Record<string, string> = {
@@ -81,48 +81,51 @@ function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       href={`/projects/${project.id}`}
-      className="group flex flex-col rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 transition-all hover:border-[var(--primary)] hover:shadow-md hover:shadow-[var(--primary)]/5"
+      className="card-hover group relative flex flex-col overflow-hidden rounded-[0.75rem] bg-[#1a1a1a] p-5 transition-all duration-300"
     >
-      {/* Top: icon + name */}
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--secondary)] text-[var(--muted-foreground)] transition-colors group-hover:text-[var(--primary)]">
-          <FolderIcon />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate font-semibold leading-tight text-[var(--foreground)]">
+      {/* Hover overlay gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#bd9dff]/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+      {/* Content */}
+      <div className="relative">
+        {/* Top: name + badges */}
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <h3 className="truncate font-headline text-base font-semibold leading-tight text-white">
             {project.name}
           </h3>
-          {project.description ? (
-            <p className="mt-1 line-clamp-2 text-sm leading-snug text-[var(--muted-foreground)]">
-              {project.description}
-            </p>
-          ) : (
-            <p className="mt-1 text-sm italic text-[var(--muted-foreground)]/50">
-              No description
-            </p>
-          )}
+          <span className={`shrink-0 rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${permissionColors[project.permissionMode] || permissionColors.default}`}>
+            {permissionLabels[project.permissionMode] || project.permissionMode}
+          </span>
         </div>
-      </div>
 
-      {/* Bottom: badges + date */}
-      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--border)]/50 pt-3">
-        {project.githubRepoFullName && (
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--secondary)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
-            <GitHubIcon />
-            <span className="max-w-[140px] truncate">{project.githubRepoFullName}</span>
-          </span>
+        {/* Description */}
+        {project.description ? (
+          <p className="line-clamp-2 text-sm leading-relaxed text-[#adaaaa]">
+            {project.description}
+          </p>
+        ) : (
+          <p className="text-sm italic text-[#adaaaa]/40">
+            No description provided
+          </p>
         )}
-        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${permissionColors[project.permissionMode] || permissionColors.default}`}>
-          {permissionLabels[project.permissionMode] || project.permissionMode}
-        </span>
-        {project.isArchived && (
-          <span className="rounded-md bg-[var(--muted)]/30 px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
-            Archived
+
+        {/* Footer */}
+        <div className="mt-4 flex flex-wrap items-center gap-2 pt-3">
+          {project.githubRepoFullName && (
+            <span className="inline-flex items-center gap-1.5 text-xs text-[#adaaaa]">
+              <GitHubIcon />
+              <span className="max-w-[160px] truncate">{project.githubRepoFullName}</span>
+            </span>
+          )}
+          {project.isArchived && (
+            <span className="rounded-sm bg-[#262626] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#adaaaa]">
+              Archived
+            </span>
+          )}
+          <span className="ml-auto text-xs text-[#adaaaa]/50">
+            {formatDate(project.updatedAt)}
           </span>
-        )}
-        <span className="ml-auto text-xs text-[var(--muted-foreground)]/70">
-          {formatDate(project.updatedAt)}
-        </span>
+        </div>
       </div>
     </Link>
   )
@@ -150,15 +153,15 @@ function ProjectSection({
   const [expanded, setExpanded] = useState(defaultExpanded)
 
   return (
-    <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)]/30">
+    <section className="overflow-hidden rounded-[0.75rem]">
       {/* Section header */}
-      <div className="flex items-center gap-3 border-b border-[var(--border)]/50 px-5 py-3.5">
+      <div className="flex items-center gap-3 px-1 py-3">
         <button
           onClick={() => setExpanded(!expanded)}
           className="flex flex-1 items-center gap-3 text-left"
         >
           <ChevronDownIcon
-            className={`shrink-0 text-[var(--muted-foreground)] transition-transform duration-200 ${
+            className={`shrink-0 text-[#adaaaa] transition-transform duration-200 ${
               expanded ? '' : '-rotate-90'
             }`}
           />
@@ -166,22 +169,20 @@ function ProjectSection({
             <img
               src={avatarUrl}
               alt=""
-              className="h-7 w-7 rounded-full object-cover"
+              className="h-6 w-6 rounded-full object-cover ring-1 ring-[rgba(72,72,71,0.2)]"
             />
           ) : (
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--secondary)] text-[var(--muted-foreground)]">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#262626] text-[#adaaaa]">
               {icon}
             </span>
           )}
-          <span className="text-sm font-semibold text-[var(--foreground)]">{title}</span>
-          <span className="rounded-full bg-[var(--secondary)] px-2 py-0.5 text-xs font-medium text-[var(--muted-foreground)]">
-            {projects.length}
-          </span>
+          <span className="font-label text-xs font-semibold uppercase tracking-widest text-[#adaaaa]">{title}</span>
         </button>
 
         <Link
           href={newProjectHref}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+          className="inline-flex items-center gap-1.5 rounded-[0.375rem] px-3 py-1.5 text-xs font-medium text-[#adaaaa] transition-colors hover:text-white"
+          style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}
         >
           <PlusIcon />
           New Project
@@ -190,23 +191,24 @@ function ProjectSection({
 
       {/* Section content */}
       {expanded && (
-        <div className="p-5">
+        <div className="pt-2">
           {projects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[var(--border)] py-10 text-center">
-              <div className="mb-2 text-[var(--muted-foreground)]/50">
+            <div className="flex flex-col items-center justify-center rounded-[0.75rem] bg-[#131313] py-12 text-center">
+              <div className="mb-3 text-[#adaaaa]/30">
                 <FolderIcon />
               </div>
-              <p className="text-sm text-[var(--muted-foreground)]">No projects yet</p>
+              <p className="text-sm text-[#adaaaa]">No projects yet</p>
               <Link
                 href={newProjectHref}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-[0.375rem] px-4 py-2 text-xs font-medium text-white transition-all hover:brightness-110"
+                style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
               >
                 <PlusIcon />
                 Create Project
               </Link>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {projects.map((project) => (
                 <ProjectCard key={project.id} project={project} />
               ))}
@@ -273,18 +275,22 @@ export default function ProjectsPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Projects</h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="font-headline text-4xl font-bold tracking-tight text-white">Projects</h1>
+            {!isLoading && (
+              <span className="font-headline text-4xl font-light text-[#bd9dff]">{projects.length}</span>
+            )}
+          </div>
           {!isLoading && (
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              {projects.length} project{projects.length !== 1 ? 's' : ''} across{' '}
-              {orgSections.filter((s) => s.projects.length > 0).length + (personalProjects.length > 0 ? 1 : 0)}{' '}
-              workspace{(orgSections.filter((s) => s.projects.length > 0).length + (personalProjects.length > 0 ? 1 : 0)) !== 1 ? 's' : ''}
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-[#adaaaa]">
+              Orchestrate your development lifecycle. Manage workspace-specific deployments, repository links, and bypass configurations from a single curated terminal.
             </p>
           )}
         </div>
         <Link
           href="/projects/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          className="inline-flex items-center gap-2 rounded-[0.375rem] px-5 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110"
+          style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
         >
           <PlusIcon />
           New Project

@@ -159,63 +159,57 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8 p-2">
-        <h1 className="text-2xl font-bold">Usage Analytics</h1>
-        <div className="animate-pulse text-[var(--muted-foreground)]">Loading analytics...</div>
+      <div className="space-y-8">
+        <h1 className="font-headline text-3xl font-bold tracking-tight text-white">Dashboard</h1>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse rounded-[0.75rem] bg-[#1a1a1a] p-6">
+              <div className="h-3 w-20 rounded bg-[#262626]" />
+              <div className="mt-3 h-8 w-24 rounded bg-[#262626]" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8 p-2">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Usage Analytics</h1>
-        <p className="text-[var(--muted-foreground)]">Token usage overview</p>
-      </div>
-
-      {/* Usage Summary Banner */}
-      <div className="rounded-lg border border-[var(--primary)]/20 bg-[var(--primary)]/5 p-5">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Today</p>
-            <p className="mt-1 text-2xl font-bold">{formatTokens(todayTokens)} <span className="text-base font-normal text-[var(--muted-foreground)]">tokens</span></p>
-            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-              {formatTokens(summary?.todayInputTokens ?? 0)} input · {formatTokens(summary?.todayOutputTokens ?? 0)} output
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">This Month</p>
-            <p className="mt-1 text-2xl font-bold">{formatTokens(totalTokens)} <span className="text-base font-normal text-[var(--muted-foreground)]">tokens</span></p>
-            <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
-              {formatTokens(summary?.totalInputTokens ?? 0)} input · {formatTokens(summary?.totalOutputTokens ?? 0)} output
-            </p>
-          </div>
-        </div>
+        <h1 className="font-headline text-3xl font-bold tracking-tight text-white">Dashboard</h1>
+        <p className="mt-1 text-sm text-[#adaaaa]">Token usage overview and recent activity</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
-          <p className="text-sm text-[var(--muted-foreground)]">Total Tokens</p>
-          <p className="text-2xl font-bold">{formatTokens(totalTokens)}</p>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            {formatTokens(summary?.totalInputTokens ?? 0)} in / {formatTokens(summary?.totalOutputTokens ?? 0)} out
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-[0.75rem] bg-[#1a1a1a] p-5">
+          <p className="font-label text-[10px] font-semibold uppercase tracking-widest text-[#adaaaa]">Today</p>
+          <p className="mt-2 font-headline text-2xl font-bold text-white">{formatTokens(todayTokens)}</p>
+          <p className="mt-1 text-xs text-[#adaaaa]">
+            {formatTokens(summary?.todayInputTokens ?? 0)} in · {formatTokens(summary?.todayOutputTokens ?? 0)} out
           </p>
         </div>
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
-          <p className="text-sm text-[var(--muted-foreground)]">Total Sessions</p>
-          <p className="text-2xl font-bold">{summary?.sessionsCount ?? 0}</p>
+        <div className="rounded-[0.75rem] bg-[#1a1a1a] p-5">
+          <p className="font-label text-[10px] font-semibold uppercase tracking-widest text-[#adaaaa]">Total Tokens</p>
+          <p className="mt-2 font-headline text-2xl font-bold text-white">{formatTokens(totalTokens)}</p>
+          <p className="mt-1 text-xs text-[#adaaaa]">
+            {formatTokens(summary?.totalInputTokens ?? 0)} in · {formatTokens(summary?.totalOutputTokens ?? 0)} out
+          </p>
         </div>
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
-          <p className="text-sm text-[var(--muted-foreground)]">Avg Tokens/Session</p>
-          <p className="text-2xl font-bold">{formatTokens(avgTokensPerSession)}</p>
+        <div className="rounded-[0.75rem] bg-[#1a1a1a] p-5">
+          <p className="font-label text-[10px] font-semibold uppercase tracking-widest text-[#adaaaa]">Sessions</p>
+          <p className="mt-2 font-headline text-2xl font-bold text-white">{summary?.sessionsCount ?? 0}</p>
+        </div>
+        <div className="rounded-[0.75rem] bg-[#1a1a1a] p-5">
+          <p className="font-label text-[10px] font-semibold uppercase tracking-widest text-[#adaaaa]">Avg / Session</p>
+          <p className="mt-2 font-headline text-2xl font-bold text-white">{formatTokens(avgTokensPerSession)}</p>
         </div>
       </div>
 
       {/* Recent Activity Feed */}
       {activity.length > 0 && (
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
-          <h2 className="mb-4 text-lg font-semibold">Recent Activity</h2>
+        <div className="rounded-[0.75rem] bg-[#1a1a1a] p-5">
+          <h2 className="mb-4 font-headline text-base font-semibold text-white">Recent Activity</h2>
           <div className="space-y-1">
             {activity.map((item) => {
               const link = getActivityLink(item)
@@ -226,7 +220,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => link && router.push(link)}
                   disabled={!link}
-                  className="flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-[var(--secondary)]/60 disabled:cursor-default disabled:hover:bg-transparent"
+                  className="flex w-full items-start gap-3 rounded-[0.375rem] px-2 py-2 text-left transition-colors hover:bg-[#262626]/60 disabled:cursor-default disabled:hover:bg-transparent"
                 >
                   <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${colorClass}`}>
                     <ActivityIcon type={item.type} />
@@ -260,24 +254,24 @@ export default function DashboardPage() {
 
       {/* Top 3 Projects by Usage */}
       {topProjects.length > 0 && (
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
-          <h2 className="mb-4 text-lg font-semibold">Top Projects by Usage</h2>
+        <div className="rounded-[0.75rem] bg-[#1a1a1a] p-5">
+          <h2 className="mb-4 font-headline text-base font-semibold text-white">Top Projects by Usage</h2>
           <div className="space-y-2">
             {topProjects.map((p) => {
               const projectTokens = p.totalInput + p.totalOutput
               const pct = (projectTokens / maxProjectTokens) * 100
               return (
                 <div key={p.projectId}>
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="truncate text-sm font-medium">{p.projectName}</span>
-                    <span className="ml-2 shrink-0 text-xs text-[var(--muted-foreground)]">
-                      {formatTokens(projectTokens)} tokens | {p.sessionCount} sessions
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="truncate text-sm font-medium text-white">{p.projectName}</span>
+                    <span className="ml-2 shrink-0 text-xs text-[#adaaaa]">
+                      {formatTokens(projectTokens)} tokens
                     </span>
                   </div>
-                  <div className="relative h-4 w-full overflow-hidden rounded bg-[var(--secondary)]">
+                  <div className="relative h-1 w-full overflow-hidden rounded-full bg-[#262626]">
                     <div
-                      className="absolute inset-y-0 left-0 rounded bg-[var(--accent)]"
-                      style={{ width: `${Math.max(pct, 1)}%`, opacity: 0.7 }}
+                      className="absolute inset-y-0 left-0 rounded-full bg-[#bd9dff]"
+                      style={{ width: `${Math.max(pct, 2)}%` }}
                     />
                   </div>
                 </div>

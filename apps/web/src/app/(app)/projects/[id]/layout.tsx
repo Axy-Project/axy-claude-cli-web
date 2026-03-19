@@ -93,22 +93,22 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
       {/* Project header */}
       <div className="shrink-0">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary)]/10">
-            <span className="text-base font-bold text-[var(--primary)]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[0.375rem]" style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}>
+            <span className="font-headline text-sm font-bold text-white">
               {currentProject?.name?.charAt(0).toUpperCase() || '?'}
             </span>
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-lg font-bold md:text-xl">{currentProject?.name || 'Loading...'}</h1>
+            <h1 className="truncate font-headline text-lg font-bold tracking-tight text-white md:text-xl">{currentProject?.name || 'Loading...'}</h1>
             {currentProject?.description && (
-              <p className="truncate text-xs text-[var(--muted-foreground)]">{currentProject.description}</p>
+              <p className="truncate text-xs text-[#adaaaa]">{currentProject.description}</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Project tabs */}
-      <div className="relative mt-3 shrink-0 border-b border-[var(--border)] md:mt-4">
+      <div className="relative mt-4 shrink-0" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
         <nav className="-mx-3 flex items-center gap-0 overflow-x-auto px-3 md:-mx-0 md:gap-0 md:px-0 scrollbar-none scroll-fade-right">
           {primaryTabs.map((item) => {
             const href = `/projects/${projectId}${item.href}`
@@ -121,14 +121,14 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                 className={cn(
                   'relative flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors md:px-4 md:py-3 md:text-[13px]',
                   active
-                    ? 'text-[var(--primary)]'
-                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                    ? 'text-[#bd9dff]'
+                    : 'text-[#adaaaa] hover:text-white'
                 )}
               >
                 <Icon className="h-4 w-4" />
                 {item.label}
                 {active && (
-                  <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-[var(--primary)]" />
+                  <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-[#bd9dff]" />
                 )}
               </Link>
             )
@@ -141,14 +141,14 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
               className={cn(
                 'relative flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors md:px-4 md:py-3 md:text-[13px]',
                 isMoreItemActive
-                  ? 'text-[var(--primary)]'
-                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                  ? 'text-[#bd9dff]'
+                  : 'text-[#adaaaa] hover:text-white'
               )}
             >
               <MoreHorizontal className="h-4 w-4" />
               <span className="hidden sm:inline">More</span>
               {isMoreItemActive && (
-                <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-[var(--primary)]" />
+                <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-[#bd9dff]" />
               )}
             </button>
           </div>
@@ -156,7 +156,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
 
         {/* More dropdown */}
         {moreOpen && (
-          <div ref={moreRef} className="absolute right-0 top-full z-50 mt-1 min-w-[200px] rounded-xl border border-[var(--border)] bg-[var(--card)] py-1.5 shadow-xl">
+          <div ref={moreRef} className="absolute right-0 top-full z-50 mt-1 min-w-[200px] rounded-[0.75rem] py-1.5 shadow-[0_40px_60px_-10px_rgba(255,255,255,0.04)]" style={{ background: '#262626', border: '1px solid rgba(72,72,71,0.2)' }}>
             {moreTabs.map((item) => {
               const href = `/projects/${projectId}${item.href}`
               const active = isActive(item.href)
@@ -169,8 +169,8 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                   className={cn(
                     'flex items-center gap-2.5 px-3.5 py-2 text-sm transition-colors',
                     active
-                      ? 'bg-[var(--primary)]/10 text-[var(--primary)]'
-                      : 'text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]'
+                      ? 'bg-[#bd9dff]/10 text-[#bd9dff]'
+                      : 'text-[#adaaaa] hover:bg-[#1a1a1a] hover:text-white'
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
@@ -183,7 +183,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
       </div>
 
       {/* Content */}
-      <div className="mt-4 min-h-0 flex-1 md:mt-5">{children}</div>
+      <div className="mt-5 min-h-0 flex-1">{children}</div>
     </div>
   )
 }
