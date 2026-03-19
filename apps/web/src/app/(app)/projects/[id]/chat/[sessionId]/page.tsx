@@ -1110,6 +1110,7 @@ export default function ChatSessionPage() {
   const [showScrollButton, setShowScrollButton] = useState(false)
   // Message search
   const [showSearch, setShowSearch] = useState(false)
+  const [showMetrics, setShowMetrics] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchHighlightIndex, setSearchHighlightIndex] = useState(-1)
   // Loading more messages (pagination)
@@ -1737,16 +1738,11 @@ export default function ChatSessionPage() {
       {/* LEFT: Chat area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 
-      {/* Session header — clean, minimal */}
-      <div className="mb-3 flex items-center justify-between gap-2 pb-3" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-[0.375rem] sm:flex" style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}>
-            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-          </div>
+      {/* Session header — minimal, no duplicate project info */}
+      <div className="mb-2 flex items-center justify-between gap-2 pb-2" style={{ borderBottom: '1px solid rgba(72,72,71,0.12)' }}>
+        <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0">
-            <h1 className="truncate font-headline text-sm font-semibold tracking-tight text-white">
+            <h1 className="truncate font-headline text-sm font-medium tracking-tight text-white">
               {currentSession?.title || 'Chat Session'}
             </h1>
             {currentSession?.parentSessionId && parentSessionTitle && (
@@ -1761,135 +1757,20 @@ export default function ChatSessionPage() {
                 Branched from: {parentSessionTitle}
               </button>
             )}
-            {/* Compact info line */}
-            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[#adaaaa] md:gap-2">
-              <ModelSelector
-                currentModel={currentSession?.model || 'claude-sonnet-4-6'}
-                onSelect={handleModelChange}
-              />
-              <EffortSelector
-                current={effortLevel}
-                onSelect={handleEffortChange}
-              />
-              {/* Plan / Code mode toggle */}
-              <button
-                type="button"
-                onClick={() => setPlanMode(!planMode)}
-                className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium transition-colors ${
-                  planMode
-                    ? 'border-blue-500/40 bg-blue-500/15 text-blue-400'
-                    : 'border-[var(--border)] bg-[var(--secondary)] text-[var(--muted-foreground)] hover:border-[var(--primary)]/40'
-                }`}
-                title={planMode ? 'Switch to Code mode' : 'Switch to Plan mode'}
-              >
-                {planMode ? (
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                ) : (
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                  </svg>
-                )}
-                {planMode ? 'Plan' : 'Code'}
-              </button>
-              {autoOrchestrate && (
-                <span className="rounded bg-purple-500/15 px-1.5 py-0.5 text-purple-400">
-                  auto-agent
-                </span>
-              )}
-              {activeAgent && (
-                <span
-                  className="rounded px-1.5 py-0.5"
-                  style={{ backgroundColor: activeAgent.color + '15', color: activeAgent.color }}
-                >
-                  {activeAgent.icon} {activeAgent.name}
-                </span>
-              )}
-              {currentSession?.mode && !planMode && (
-                <span className="rounded bg-[var(--secondary)] px-1.5 py-0.5">
-                  {currentSession.mode}
-                </span>
-              )}
-              {isStreaming && (
-                <span className="flex items-center gap-1 text-amber-400">
-                  <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  <span className="font-mono">streaming...</span>
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        {/* Right side — simplified actions */}
-        <div className="relative flex shrink-0 items-center gap-1.5 md:gap-2">
-          {/* Search inline */}
-          {showSearch ? (
-            <div className="flex items-center gap-1 rounded-[0.375rem] px-2 py-1" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}>
-              <svg className="h-3.5 w-3.5 shrink-0 text-[#adaaaa]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setSearchHighlightIndex(0) }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchMatchArray.length > 0) setSearchHighlightIndex((i) => (i + 1) % searchMatchArray.length)
-                  if (e.key === 'Escape') { setShowSearch(false); setSearchQuery(''); setSearchHighlightIndex(-1) }
-                }}
-                placeholder="Search..."
-                className="w-28 border-none bg-transparent text-xs text-white outline-none placeholder:text-[#adaaaa]/50 md:w-36"
-                autoFocus
-              />
-              <button type="button" onClick={() => { setShowSearch(false); setSearchQuery(''); setSearchHighlightIndex(-1) }} className="text-[#adaaaa] hover:text-white">
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-          ) : messages.length > 0 ? (
-            <button type="button" onClick={() => setShowSearch(true)} className="rounded-[0.375rem] p-1.5 text-[#adaaaa] transition-colors hover:text-white" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }} title="Search">
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            </button>
-          ) : null}
-
-          {/* Session menu dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className="flex items-center gap-1.5 rounded-[0.375rem] px-2.5 py-1.5 text-[11px] font-medium text-[#adaaaa] transition-colors hover:text-white"
-              style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-              <span className="hidden sm:inline">Session</span>
-            </button>
-            {showExportMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
-                <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-[0.75rem] py-1.5 shadow-[0_40px_60px_-10px_rgba(255,255,255,0.04)]" style={{ background: '#262626', border: '1px solid rgba(72,72,71,0.2)' }}>
-                  <button type="button" onClick={() => { handleExport('markdown'); setShowExportMenu(false) }} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs text-[#adaaaa] transition-colors hover:bg-[#1a1a1a] hover:text-white">
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                    Export Markdown
-                  </button>
-                  <button type="button" onClick={() => { handleExport('json'); setShowExportMenu(false) }} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs text-[#adaaaa] transition-colors hover:bg-[#1a1a1a] hover:text-white">
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
-                    Export JSON
-                  </button>
-                  {messages.length > 0 && !isStreaming && (
-                    <button type="button" onClick={() => { setShowPlayback(true); setShowExportMenu(false) }} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs text-[#adaaaa] transition-colors hover:bg-[#1a1a1a] hover:text-white">
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      Session Replay
-                    </button>
-                  )}
-                  <div className="my-1" style={{ borderTop: '1px solid rgba(72,72,71,0.15)' }} />
-                  <span className="hidden md:block"><TaskPanel projectId={projectId} sessionId={sessionId} /></span>
-                </div>
-              </>
+            {/* Streaming indicator inline */}
+            {isStreaming && (
+              <span className="flex items-center gap-1 text-[10px] text-amber-400">
+                <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                streaming...
+              </span>
             )}
           </div>
-
+        </div>
+        {/* Right side — toggle sidebar + stop */}
+        <div className="flex shrink-0 items-center gap-1.5">
           {isStreaming && (
             <button
               onClick={() => stopGeneration(sessionId)}
@@ -1900,6 +1781,14 @@ export default function ChatSessionPage() {
               <span className="hidden sm:inline">Stop</span>
             </button>
           )}
+          <button
+            onClick={() => setShowMetrics(!showMetrics)}
+            className="rounded-[0.375rem] p-1.5 text-[#adaaaa] transition-colors hover:text-white"
+            style={{ background: showMetrics ? 'rgba(189,157,255,0.1)' : '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}
+            title={showMetrics ? 'Hide panel' : 'Show panel'}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>
+          </button>
         </div>
       </div>
 
@@ -2155,17 +2044,6 @@ export default function ChatSessionPage() {
           </div>
         )}
 
-        {/* Engine badge + shortcut hint */}
-        <div className="flex items-center justify-center gap-3 pb-2">
-          <span className="flex items-center gap-1.5 rounded-sm px-2 py-0.5 font-label text-[9px] font-bold uppercase tracking-widest text-[#adaaaa]" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.15)' }}>
-            <span className="h-1.5 w-1.5 rounded-full bg-[#3bfb8c]" />
-            ENGINE: {modelShort.toUpperCase().replace(/ /g, '_')}
-          </span>
-          <span className="rounded-sm px-2 py-0.5 font-label text-[9px] font-bold uppercase tracking-widest text-[#adaaaa]" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.15)' }}>
-            CMD + ENTER TO SEND
-          </span>
-        </div>
-
         <ChatInput
           sessionId={sessionId}
           isStreaming={isStreaming}
@@ -2188,10 +2066,43 @@ export default function ChatSessionPage() {
       )}
       </div>{/* end left chat area */}
 
-      {/* RIGHT: Session Metrics Sidebar */}
-      <div className="hidden w-72 shrink-0 overflow-y-auto border-l border-[rgba(72,72,71,0.15)] pl-6 lg:block">
+      {/* RIGHT: Session Panel (togglable) */}
+      {showMetrics && (
+      <div className="custom-scrollbar w-72 shrink-0 overflow-y-auto border-l border-[rgba(72,72,71,0.15)] pl-5 hidden md:block">
         <div className="space-y-6 py-2">
-          {/* Header */}
+          {/* Controls */}
+          <h3 className="font-label text-[10px] font-bold uppercase tracking-[0.15em] text-[#adaaaa]">Controls</h3>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#adaaaa]">Model</span>
+              <ModelSelector currentModel={currentSession?.model || 'claude-sonnet-4-6'} onSelect={handleModelChange} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#adaaaa]">Effort</span>
+              <EffortSelector current={effortLevel} onSelect={handleEffortChange} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#adaaaa]">Mode</span>
+              <button onClick={() => setPlanMode(!planMode)} className={`rounded-[0.375rem] px-2.5 py-1 text-[11px] font-medium transition-colors ${planMode ? 'bg-blue-500/15 text-blue-400' : 'bg-[#1a1a1a] text-[#adaaaa]'}`} style={{ border: '1px solid rgba(72,72,71,0.2)' }}>
+                {planMode ? 'Plan' : 'Code'}
+              </button>
+            </div>
+            {/* Search */}
+            <button onClick={() => setShowSearch(!showSearch)} className="flex w-full items-center gap-2 rounded-[0.375rem] px-3 py-2 text-xs text-[#adaaaa] transition-colors hover:text-white" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}>
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              Search Messages
+            </button>
+            {/* Export */}
+            <button onClick={() => handleExport('markdown')} className="flex w-full items-center gap-2 rounded-[0.375rem] px-3 py-2 text-xs text-[#adaaaa] transition-colors hover:text-white" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}>
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+              Export Markdown
+            </button>
+            <TaskPanel projectId={projectId} sessionId={sessionId} />
+          </div>
+
+          <div className="my-2" style={{ borderTop: '1px solid rgba(72,72,71,0.12)' }} />
+
+          {/* Metrics */}
           <h3 className="font-label text-[10px] font-bold uppercase tracking-[0.15em] text-[#adaaaa]">Session Metrics</h3>
 
           {/* Agent/Engine info */}
@@ -2283,6 +2194,7 @@ export default function ChatSessionPage() {
           </div>
         </div>
       </div>
+      )}
     </div>
     </SplitTerminal>
   )
