@@ -49,13 +49,16 @@ RUN pnpm --filter @axy/server build
 # =============================================================================
 FROM node:22-alpine AS runner
 
-# git is needed by simple-git at runtime
-RUN apk add --no-cache git
+# git is needed by simple-git, bash/curl for Claude CLI installer
+RUN apk add --no-cache git bash curl
+
+# Install Claude CLI (requires npm which comes with node)
+RUN npm install -g @anthropic-ai/claude-code || true
 
 WORKDIR /app
 
 # Copy workspace config (needed for pnpm workspace resolution)
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml VERSION ./
 
 # Copy shared package (source + built output, needed for imports)
 COPY --from=builder /app/packages/shared ./packages/shared

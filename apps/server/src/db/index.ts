@@ -436,6 +436,285 @@ if (config.useSqlite) {
   const pgSchema = await import('./schema.js')
 
   const pool = new pg.Pool({ connectionString: config.databaseUrl })
+
+  // Auto-create tables for PostgreSQL (same as SQLite but with PG syntax)
+  const client = await pool.connect()
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        supabase_id TEXT UNIQUE NOT NULL,
+        email TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        password_hash TEXT,
+        avatar_url TEXT,
+        github_username TEXT,
+        github_token_encrypted TEXT,
+        is_admin BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS connected_accounts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id),
+        type TEXT NOT NULL,
+        nickname TEXT NOT NULL,
+        token_encrypted TEXT NOT NULL,
+        username TEXT,
+        is_default BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS organizations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
+        avatar_url TEXT,
+        plan TEXT NOT NULL DEFAULT 'free',
+        settings_json JSONB DEFAULT '{}',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS org_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        org_id UUID NOT NULL REFERENCES organizations(id),
+        user_id UUID NOT NULL REFERENCES users(id),
+        role TEXT NOT NULL DEFAULT 'member',
+        joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS projects (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id),
+        org_id UUID REFERENCES organizations(id),
+        name TEXT NOT NULL,
+        description TEXT,
+        local_path TEXT NOT NULL,
+        github_repo_url TEXT,
+        github_repo_full_name TEXT,
+        default_branch TEXT NOT NULL DEFAULT 'main',
+        claude_md_content TEXT,
+        settings_json JSONB DEFAULT '{}',
+        permission_mode TEXT NOT NULL DEFAULT 'default',
+        github_account_id UUID REFERENCES connected_accounts(id),
+        claude_account_id UUID REFERENCES connected_accounts(id),
+        auto_push_to_github BOOLEAN NOT NULL DEFAULT false,
+        auto_deploy_on_change BOOLEAN NOT NULL DEFAULT false,
+        is_archived BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS sessions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id UUID NOT NULL REFERENCES projects(id),
+        user_id UUID NOT NULL REFERENCES users(id),
+        title TEXT,
+        model TEXT NOT NULL DEFAULT 'claude-sonnet-4-6',
+        mode TEXT NOT NULL DEFAULT 'code',
+        effort TEXT NOT NULL DEFAULT 'medium',
+        cli_session_id TEXT,
+        parent_session_id UUID,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        is_pinned INTEGER DEFAULT 0,
+        total_input_tokens INTEGER NOT NULL DEFAULT 0,
+        total_output_tokens INTEGER NOT NULL DEFAULT 0,
+        total_cost_usd REAL NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        session_id UUID NOT NULL REFERENCES sessions(id),
+        role TEXT NOT NULL,
+        content_json JSONB NOT NULL,
+        model TEXT,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        cost_usd REAL,
+        duration_ms INTEGER,
+        tool_calls_json JSONB,
+        thinking_json JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS agent_profiles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id),
+        org_id UUID REFERENCES organizations(id),
+        name TEXT NOT NULL,
+        description TEXT,
+        icon TEXT,
+        color TEXT,
+        role TEXT NOT NULL DEFAULT 'general',
+        model TEXT NOT NULL DEFAULT 'claude-sonnet-4-6',
+        system_prompt TEXT,
+        allowed_tools_json JSONB,
+        disallowed_tools_json JSONB,
+        max_tokens INTEGER NOT NULL DEFAULT 16384,
+        temperature REAL NOT NULL DEFAULT 1.0,
+        extended_thinking BOOLEAN NOT NULL DEFAULT false,
+        thinking_budget INTEGER NOT NULL DEFAULT 10000,
+        permission_mode TEXT NOT NULL DEFAULT 'default',
+        boss_agent_id UUID,
+        hierarchy_level INTEGER NOT NULL DEFAULT 0,
+        budget_monthly_usd REAL,
+        budget_daily_usd REAL,
+        total_tasks_completed INTEGER NOT NULL DEFAULT 0,
+        total_cost_usd REAL NOT NULL DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS skills (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id),
+        org_id UUID REFERENCES organizations(id),
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        trigger TEXT,
+        prompt_template TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'general',
+        allowed_tools_json JSONB,
+        is_global BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS agent_templates (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        description TEXT,
+        source_url TEXT,
+        category TEXT NOT NULL DEFAULT 'general',
+        config_json JSONB NOT NULL,
+        is_official BOOLEAN NOT NULL DEFAULT false,
+        download_count INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS permission_rules (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id UUID NOT NULL REFERENCES projects(id),
+        tool_pattern TEXT NOT NULL,
+        action TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS token_usage (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id),
+        session_id UUID NOT NULL REFERENCES sessions(id),
+        model TEXT NOT NULL,
+        input_tokens INTEGER NOT NULL,
+        output_tokens INTEGER NOT NULL,
+        cost_usd REAL NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS mcp_servers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id UUID NOT NULL REFERENCES projects(id),
+        name TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'stdio',
+        command TEXT NOT NULL,
+        args_json JSONB DEFAULT '[]',
+        env_json JSONB DEFAULT '{}',
+        is_enabled BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS tasks (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        session_id UUID REFERENCES sessions(id),
+        user_id UUID NOT NULL REFERENCES users(id),
+        project_id UUID NOT NULL REFERENCES projects(id),
+        type TEXT NOT NULL DEFAULT 'background_task',
+        status TEXT NOT NULL DEFAULT 'pending',
+        title TEXT NOT NULL,
+        description TEXT,
+        command TEXT,
+        result TEXT,
+        error TEXT,
+        progress INTEGER NOT NULL DEFAULT 0,
+        metadata_json JSONB DEFAULT '{}',
+        started_at TIMESTAMPTZ,
+        completed_at TIMESTAMPTZ,
+        duration_ms INTEGER,
+        cron_expression TEXT,
+        is_recurring BOOLEAN DEFAULT false,
+        next_run_at TIMESTAMPTZ,
+        last_run_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS webhooks (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id),
+        project_id UUID REFERENCES projects(id),
+        name TEXT NOT NULL,
+        url TEXT NOT NULL,
+        secret TEXT,
+        events JSONB DEFAULT '[]',
+        is_enabled BOOLEAN NOT NULL DEFAULT true,
+        last_triggered_at TIMESTAMPTZ,
+        last_status INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS notes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id),
+        project_id UUID REFERENCES projects(id),
+        title TEXT NOT NULL,
+        content TEXT NOT NULL DEFAULT '',
+        color TEXT NOT NULL DEFAULT '#7c3aed',
+        is_pinned BOOLEAN NOT NULL DEFAULT false,
+        is_handwritten BOOLEAN NOT NULL DEFAULT false,
+        canvas_data_json TEXT,
+        tags JSONB DEFAULT '[]',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS deploy_pipelines (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id UUID NOT NULL REFERENCES projects(id),
+        user_id UUID NOT NULL REFERENCES users(id),
+        name TEXT NOT NULL,
+        branch_pattern TEXT NOT NULL,
+        sftp_host TEXT NOT NULL,
+        sftp_port INTEGER NOT NULL DEFAULT 22,
+        sftp_username TEXT NOT NULL,
+        sftp_password_encrypted TEXT,
+        sftp_private_key_encrypted TEXT,
+        sftp_remote_path TEXT NOT NULL,
+        sftp_source_path TEXT NOT NULL DEFAULT '.',
+        pre_deploy_command TEXT,
+        webhook_url TEXT,
+        webhook_type TEXT NOT NULL DEFAULT 'custom',
+        is_enabled BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS deploy_runs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        pipeline_id UUID NOT NULL REFERENCES deploy_pipelines(id),
+        project_id UUID NOT NULL REFERENCES projects(id),
+        user_id UUID NOT NULL REFERENCES users(id),
+        branch TEXT NOT NULL,
+        commit_hash TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        files_uploaded INTEGER NOT NULL DEFAULT 0,
+        error TEXT,
+        webhook_status INTEGER,
+        started_at TIMESTAMPTZ,
+        completed_at TIMESTAMPTZ,
+        duration_ms INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `)
+    console.log('[DB] PostgreSQL tables auto-created')
+  } catch (err) {
+    console.error('[DB] PostgreSQL auto-create error (tables may already exist):', (err as Error).message)
+  } finally {
+    client.release()
+  }
+
   _db = drizzle(pool, { schema: pgSchema })
   _schema = pgSchema
 
