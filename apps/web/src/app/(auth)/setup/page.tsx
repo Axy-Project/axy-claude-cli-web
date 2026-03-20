@@ -324,9 +324,14 @@ export default function SetupPage() {
 
                   {/* Extract and show clickable link */}
                   {loginUrl && (() => {
-                    // Strip all ANSI escape codes first, then find URL
-                    const cleanOutput = loginUrl.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '')
-                    const urlMatch = cleanOutput.match(/(https:\/\/claude\.ai[^\s]+|https:\/\/platform\.claude\.com[^\s]+|https:\/\/console\.anthropic\.com[^\s]+)/)
+                    // Strip ANSI codes, then join all lines to handle URL wrapping
+                    const cleanOutput = loginUrl
+                      .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+                      .replace(/\x1b\][^\x07]*\x07/g, '')
+                      .replace(/\r?\n/g, '') // join lines — URL wraps across lines in PTY
+                    const urlMatch = cleanOutput.match(/(https:\/\/claude\.ai\/oauth\/authorize\S+)/)
+                      || cleanOutput.match(/(https:\/\/claude\.ai[^\s"'<>]+)/)
+                      || cleanOutput.match(/(https:\/\/platform\.claude\.com[^\s"'<>]+)/)
                     return urlMatch ? (
                       <a
                         href={urlMatch[1]}
@@ -369,7 +374,7 @@ export default function SetupPage() {
                 )}
 
                 <button
-                  onClick={() => router.push('/dashboard')}
+                  onClick={async () => { await api.post('/api/setup/complete', {}).catch(() => {}); router.push('/dashboard') }}
                   className={`rounded-[0.375rem] px-4 py-2.5 text-sm font-medium transition-all ${
                     loginStatus === 'success' || cliEmail
                       ? 'flex-1 text-white hover:brightness-110'

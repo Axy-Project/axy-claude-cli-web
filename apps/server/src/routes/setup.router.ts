@@ -67,4 +67,14 @@ router.post('/login', async (req, res) => {
   }
 })
 
+/** POST /api/setup/complete — Mark setup as complete (called when user finishes or skips Claude step) */
+router.post('/complete', async (_req, res) => {
+  try {
+    await setupService.setSetting('setup_complete', 'true')
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
 export default router

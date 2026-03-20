@@ -97,8 +97,8 @@ export class SetupService {
       user = created
     }
 
-    await this.setSetting('setup_complete', 'true')
     await this.setSetting('auth_method', 'local')
+    // Note: setup_complete is NOT set here — it's set when user finishes or skips the Claude step
 
     const token = generateToken(user.id, user.email)
     return { token, user: { id: user.id, email: user.email, displayName: user.displayName, isAdmin: true } }
