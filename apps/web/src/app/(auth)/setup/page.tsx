@@ -254,59 +254,91 @@ export default function SetupPage() {
                 Connect your Claude account to start chatting.
               </p>
 
-              {/* Instructions */}
-              <div className="mt-4 rounded-[0.375rem] px-4 py-3" style={{ background: 'rgba(189,157,255,0.06)', border: '1px solid rgba(189,157,255,0.15)' }}>
-                <p className="text-xs font-medium text-white">How to authenticate:</p>
-                <ol className="mt-2 space-y-1.5 text-xs" style={{ color: '#adaaaa' }}>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold" style={{ background: 'rgba(189,157,255,0.15)', color: '#bd9dff' }}>1</span>
-                    <span>Create a project and open the <strong className="text-white">Terminal</strong> tab</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold" style={{ background: 'rgba(189,157,255,0.15)', color: '#bd9dff' }}>2</span>
-                    <span>Run: <code className="rounded px-1.5 py-0.5 text-[#bd9dff]" style={{ background: '#0e0e0e' }}>claude auth login</code></span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold" style={{ background: 'rgba(189,157,255,0.15)', color: '#bd9dff' }}>3</span>
-                    <span>Follow the link to authorize, then return here</span>
-                  </li>
-                </ol>
-              </div>
-
               {loginStatus === 'success' || cliEmail ? (
-                <div
-                  className="mt-4 rounded-[0.375rem] px-4 py-3"
-                  style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)' }}
-                >
+                <div className="mt-4 rounded-[0.375rem] px-4 py-3" style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-green-400" />
                     <span className="text-sm font-medium text-green-400">Connected</span>
                   </div>
                   {cliEmail && <p className="mt-1 text-xs" style={{ color: '#adaaaa' }}>{cliEmail}</p>}
                 </div>
-              ) : loginStatus === 'awaiting_auth' && loginUrl ? (
-                <div className="mt-4 space-y-3">
-                  <div
-                    className="rounded-[0.375rem] px-4 py-3"
-                    style={{ background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.25)' }}
-                  >
-                    <p className="text-sm font-medium text-amber-400">Waiting for authorization...</p>
-                    <p className="mt-1 text-xs" style={{ color: '#adaaaa' }}>Click the link below to sign in with your Claude account:</p>
+              ) : (
+                <>
+                  {/* Embedded terminal for claude auth login */}
+                  <div className="mt-4 overflow-hidden rounded-[0.5rem]" style={{ border: '1px solid rgba(72,72,71,0.2)' }}>
+                    {/* Terminal header */}
+                    <div className="flex items-center justify-between px-3 py-2" style={{ background: '#131313', borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1.5">
+                          <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+                          <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+                          <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+                        </div>
+                        <span className="font-mono text-[10px] text-[#767575]">claude auth login</span>
+                      </div>
+                      {!loginUrl && loginStatus !== 'awaiting_auth' && (
+                        <button
+                          onClick={async () => {
+                            setIsSubmitting(true)
+                            setError(null)
+                            try {
+                              await api.post('/api/claude/login-pty/start', {})
+                              setLoginStatus('awaiting_auth')
+                              // Poll output
+                              const poll = setInterval(async () => {
+                                try {
+                                  const res = await api.get<{ output: string; status: string }>('/api/claude/login-pty/output')
+                                  setLoginUrl(res.output)
+                                  if (res.status === 'done') {
+                                    clearInterval(poll)
+                                    // Check if auth succeeded
+                                    const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
+                                    if (status.cliLoggedIn) {
+                                      setCliEmail(status.cliEmail)
+                                      setLoginStatus('success')
+                                    }
+                                  }
+                                } catch { /* ignore */ }
+                              }, 1500)
+                              setTimeout(() => clearInterval(poll), 300000)
+                            } catch (err) {
+                              setError((err as Error).message)
+                            } finally { setIsSubmitting(false) }
+                          }}
+                          disabled={isSubmitting}
+                          className="rounded px-2 py-0.5 text-[10px] font-medium text-[#bd9dff] transition-colors hover:bg-[#bd9dff]/10"
+                        >
+                          {isSubmitting ? 'Starting...' : 'Run'}
+                        </button>
+                      )}
+                    </div>
+                    {/* Terminal output */}
+                    <div className="h-48 overflow-auto p-3 font-mono text-xs leading-relaxed" style={{ background: '#0a0a0a', color: '#c9d1d9' }}>
+                      {!loginUrl && loginStatus !== 'awaiting_auth' ? (
+                        <p style={{ color: '#767575' }}>Click &quot;Run&quot; to start authentication...</p>
+                      ) : (
+                        <pre className="whitespace-pre-wrap break-all">{loginUrl || 'Starting claude auth login...'}</pre>
+                      )}
+                    </div>
                   </div>
-                  <a
-                    href={loginUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full rounded-[0.375rem] px-4 py-2.5 text-center text-sm font-medium text-white transition-all hover:brightness-110"
-                    style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
-                  >
-                    Open Claude Login Page
-                  </a>
-                  <p className="text-center text-[10px]" style={{ color: '#adaaaa' }}>
-                    After authorizing, come back here. This page will detect the login automatically.
-                  </p>
-                </div>
-              ) : null}
+
+                  {/* Extract and show clickable link */}
+                  {loginUrl && (() => {
+                    const urlMatch = loginUrl.match(/(https:\/\/[^\s\x1b]+)/)
+                    return urlMatch ? (
+                      <a
+                        href={urlMatch[1].replace(/[\x1b\[\]0-9;]*m/g, '')}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 block w-full rounded-[0.375rem] px-4 py-2.5 text-center text-sm font-medium text-white transition-all hover:brightness-110"
+                        style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+                      >
+                        Open Authorization Page
+                      </a>
+                    ) : null
+                  })()}
+                </>
+              )}
 
               <div className="mt-6 flex gap-2">
                 {loginStatus !== 'success' && !cliEmail && (
@@ -320,7 +352,7 @@ export default function SetupPage() {
                           setCliEmail(status.cliEmail)
                           setLoginStatus('success')
                         } else {
-                          setError('Not authenticated yet. Run "claude auth login" in the Terminal tab of any project.')
+                          setError('Not authenticated yet. Click "Run" above, then open the authorization link.')
                         }
                       } catch (err) {
                         setError((err as Error).message)
@@ -352,10 +384,7 @@ export default function SetupPage() {
               </div>
 
               {error && (
-                <p
-                  className="mt-3 rounded-[0.375rem] px-3 py-2 text-sm text-red-400"
-                  style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}
-                >
+                <p className="mt-3 rounded-[0.375rem] px-3 py-2 text-sm text-red-400" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                   {error}
                 </p>
               )}
