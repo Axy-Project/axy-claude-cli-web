@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [localForm, setLocalForm] = useState({ email: '', password: '' })
   const login = useAuthStore((s) => s.login)
 
-  // Check setup status on load
+  // Check setup status on load — redirect to setup if not complete
   useEffect(() => {
     api.get<{ setupComplete: boolean; authMethod: string }>('/api/setup/status')
       .then((data) => {
@@ -23,7 +23,10 @@ export default function LoginPage() {
         }
         setAuthMethod(data.authMethod || 'local')
       })
-      .catch(() => setAuthMethod('local'))
+      .catch(() => {
+        // API failed — probably first launch, go to setup
+        router.replace('/setup')
+      })
   }, [router])
 
   const handleGitHubLogin = async () => {
