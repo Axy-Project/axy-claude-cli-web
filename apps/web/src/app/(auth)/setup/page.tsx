@@ -304,7 +304,7 @@ export default function SetupPage() {
                           return
                         }
                         // Start login flow
-                        const result = await api.post<{ url: string | null; status: string }>('/api/claude/login', {})
+                        const result = await api.post<{ url: string | null; status: string; error?: string }>('/api/claude/login', {})
                         if (result.url) {
                           setLoginUrl(result.url)
                           setLoginStatus('awaiting_auth')
@@ -321,8 +321,10 @@ export default function SetupPage() {
                           }, 2000)
                           // Stop polling after 5 minutes
                           setTimeout(() => clearInterval(poll), 300000)
+                        } else if (result.status === 'cli_not_installed') {
+                          setError(result.error || 'Claude CLI is not installed. Install it with: docker exec -it <container> npm install -g @anthropic-ai/claude-code')
                         } else {
-                          setError('Could not start Claude login. Is the CLI installed?')
+                          setError('Could not start Claude login. Try running: docker exec -it <server-container> claude auth login')
                         }
                       } catch (err) {
                         setError((err as Error).message)

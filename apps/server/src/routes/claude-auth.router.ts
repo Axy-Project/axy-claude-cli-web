@@ -56,6 +56,26 @@ router.post('/login', async (req: AuthenticatedRequest, res) => {
     const { method } = req.body || {} // 'claudeai' or 'console'
     const userId = req.userId!
 
+    // Check if CLI is installed first
+    let cliInstalled = false
+    try {
+      const { execSync } = await import('child_process')
+      execSync(`${config.claudePath} --version`, { timeout: 5000, encoding: 'utf-8' })
+      cliInstalled = true
+    } catch { /* not installed */ }
+
+    if (!cliInstalled) {
+      res.json({
+        success: true,
+        data: {
+          url: null,
+          status: 'cli_not_installed',
+          error: 'Claude CLI is not installed in this container. Run: docker exec -it <container> npm install -g @anthropic-ai/claude-code',
+        },
+      })
+      return
+    }
+
     // Kill existing login process for this user
     const existing = activeLogins.get(userId)
     if (existing?.process) {
@@ -66,7 +86,7 @@ router.post('/login', async (req: AuthenticatedRequest, res) => {
     if (method === 'console') args.push('--console')
 
     const loginProcess = spawn(config.claudePath, args, {
-      env: { ...process.env, NO_COLOR: '1', BROWSER: 'echo' }, // Prevent browser open, output URL
+      env: { ...process.env, NO_COLOR: '1', BROWSER: 'echo' },
       stdio: ['pipe', 'pipe', 'pipe'],
     })
 

@@ -98,6 +98,20 @@ docker compose up -d
 
 Open `http://localhost:3457` to access the setup wizard.
 
+### Claude CLI Authentication
+
+After the first deploy, you need to authenticate the Claude CLI inside the server container:
+
+```bash
+# Find the server container name
+docker compose ps
+
+# Authenticate Claude CLI (opens a URL you paste into your browser)
+docker exec -it <server-container> claude auth login
+```
+
+This only needs to be done once. The authentication persists across container restarts.
+
 ## Architecture
 
 ```
