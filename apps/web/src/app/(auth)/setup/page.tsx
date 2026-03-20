@@ -352,26 +352,45 @@ export default function SetupPage() {
                           <button
                             onClick={async () => {
                               if (!authCode.trim()) return
+                              setIsSubmitting(true)
+                              setError(null)
                               try {
-                                await api.post('/api/claude/login-pty/input', { data: authCode.trim() + '\n' })
+                                const result = await api.post<{ outputLength: number; status: string }>('/api/claude/login-pty/input', { data: authCode.trim() + '\n' })
                                 setAuthCode('')
-                                // Poll for completion
-                                setTimeout(async () => {
-                                  const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
-                                  if (status.cliLoggedIn) {
-                                    setCliEmail(status.cliEmail)
-                                    setLoginStatus('success')
-                                  }
-                                }, 3000)
+
+                                // Poll for auth completion (check every 2s for 30s)
+                                let attempts = 0
+                                const poll = setInterval(async () => {
+                                  attempts++
+                                  try {
+                                    // Check PTY output for success/error
+                                    const ptyRes = await api.get<{ output: string; status: string }>('/api/claude/login-pty/output')
+                                    setLoginUrl(ptyRes.output) // Update terminal display
+
+                                    // Check if CLI auth succeeded
+                                    const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
+                                    if (status.cliLoggedIn) {
+                                      clearInterval(poll)
+                                      setCliEmail(status.cliEmail)
+                                      setLoginStatus('success')
+                                      setIsSubmitting(false)
+                                    } else if (attempts >= 15) {
+                                      clearInterval(poll)
+                                      setError('Authentication timed out. Try running "claude auth login" in the Terminal tab of a project.')
+                                      setIsSubmitting(false)
+                                    }
+                                  } catch { /* ignore */ }
+                                }, 2000)
                               } catch (err) {
                                 setError((err as Error).message)
+                                setIsSubmitting(false)
                               }
                             }}
-                            disabled={!authCode.trim()}
+                            disabled={!authCode.trim() || isSubmitting}
                             className="shrink-0 rounded-[0.375rem] px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-40"
                             style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
                           >
-                            Submit
+                            {isSubmitting ? 'Verifying...' : 'Submit Code'}
                           </button>
                         </div>
                       </div>

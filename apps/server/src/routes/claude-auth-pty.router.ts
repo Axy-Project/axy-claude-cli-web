@@ -84,15 +84,22 @@ router.get('/output', async (req: AuthenticatedRequest, res) => {
 /** POST /api/claude/login-pty/input — Send input to PTY */
 router.post('/input', async (req: AuthenticatedRequest, res) => {
   const entry = activePtys.get(req.userId!)
-  if (!entry?.pty || entry.status !== 'running') {
+  if (!entry?.pty) {
     res.status(400).json({ success: false, error: 'No active login session' })
+    return
+  }
+  if (entry.status !== 'running') {
+    res.status(400).json({ success: false, error: `Session is ${entry.status}, not running` })
     return
   }
   const { data } = req.body
   if (data) {
+    // Write the code to the PTY — the CLI expects it pasted into stdin
     entry.pty.write(data)
+    console.log(`[claude-auth] Sent ${data.length} chars to PTY`)
   }
-  res.json({ success: true })
+  // Return current output so frontend can see what happened
+  res.json({ success: true, data: { outputLength: entry.output.length, status: entry.status } })
 })
 
 /** POST /api/claude/login-pty/kill — Kill PTY */

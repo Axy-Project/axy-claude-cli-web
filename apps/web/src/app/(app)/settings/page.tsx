@@ -407,29 +407,134 @@ export default function UserSettingsPage() {
           </div>
         ) : (
           <div className="mt-3 space-y-3">
-            <div className="rounded-[0.375rem] px-4 py-3 text-xs" style={{ background: 'rgba(189,157,255,0.06)', border: '1px solid rgba(189,157,255,0.15)' }}>
-              <p className="font-medium text-[var(--foreground)]">To authenticate:</p>
-              <p className="mt-1 text-[var(--muted-foreground)]">
-                Open the <strong className="text-[var(--foreground)]">Terminal</strong> tab in any project and run:
-              </p>
-              <code className="mt-1.5 block rounded bg-[var(--background)] px-2.5 py-1.5 font-mono text-[var(--primary)]">claude auth login</code>
+            {/* Embedded terminal for claude auth login */}
+            <div className="overflow-hidden rounded-[0.5rem]" style={{ border: '1px solid rgba(72,72,71,0.2)' }}>
+              <div className="flex items-center justify-between px-3 py-2" style={{ background: '#131313', borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#ff5f57]" />
+                    <span className="h-2 w-2 rounded-full bg-[#febc2e]" />
+                    <span className="h-2 w-2 rounded-full bg-[#28c840]" />
+                  </div>
+                  <span className="font-mono text-[10px] text-[var(--muted-foreground)]">claude auth login</span>
+                </div>
+                {!claudeLoginUrl && (
+                  <button
+                    onClick={async () => {
+                      setClaudeLoggingIn(true)
+                      try {
+                        await api.post('/api/claude/login-pty/start', {})
+                        // Poll output
+                        const poll = setInterval(async () => {
+                          try {
+                            const res = await api.get<{ output: string; status: string; authUrl?: string }>('/api/claude/login-pty/output')
+                            setClaudeLoginUrl(res.output)
+                            if (res.authUrl) {
+                              (window as any).__claudeAuthUrl = res.authUrl
+                            }
+                            if (res.status === 'done') {
+                              clearInterval(poll)
+                              api.get<any>('/api/claude/status').then(setClaudeStatus).catch(() => {})
+                              setClaudeLoggingIn(false)
+                            }
+                          } catch { /* ignore */ }
+                        }, 1500)
+                        setTimeout(() => { clearInterval(poll); setClaudeLoggingIn(false) }, 300000)
+                      } catch { setClaudeLoggingIn(false) }
+                    }}
+                    disabled={claudeLoggingIn}
+                    className="rounded px-2 py-0.5 text-[10px] font-medium text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/10"
+                  >
+                    {claudeLoggingIn ? 'Starting...' : 'Run'}
+                  </button>
+                )}
+              </div>
+              <div className="h-36 overflow-auto p-3 font-mono text-xs leading-relaxed" style={{ background: '#0a0a0a', color: '#c9d1d9' }}>
+                {!claudeLoginUrl ? (
+                  <p style={{ color: '#767575' }}>Click &quot;Run&quot; to start authentication...</p>
+                ) : (
+                  <pre className="whitespace-pre-wrap break-all">{claudeLoginUrl}</pre>
+                )}
+              </div>
             </div>
+
+            {/* Auth URL + Code input */}
+            {(window as any).__claudeAuthUrl && (
+              <a
+                href={(window as any).__claudeAuthUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full rounded-[0.375rem] px-4 py-2 text-center text-sm font-medium text-white transition-all hover:brightness-110"
+                style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}
+              >
+                1. Open Authorization Page
+              </a>
+            )}
+
+            {claudeLoginUrl && (
+              <div>
+                <p className="mb-2 text-xs text-[var(--muted-foreground)]">2. Paste the authentication code:</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Paste code from Claude..."
+                    className="flex-1 rounded-[0.375rem] px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-[var(--muted-foreground)]/50 focus:ring-1 focus:ring-[var(--primary)]"
+                    style={{ background: '#000', border: '1px solid rgba(72,72,71,0.2)' }}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        const input = e.currentTarget
+                        const code = input.value.trim()
+                        if (!code) return
+                        await api.post('/api/claude/login-pty/input', { data: code + '\n' }).catch(() => {})
+                        input.value = ''
+                        // Poll for auth
+                        setTimeout(async () => {
+                          const status = await api.get<any>('/api/claude/status').catch(() => null)
+                          if (status?.cliLoggedIn) {
+                            setClaudeStatus(status)
+                            setClaudeLoginUrl(null)
+                          }
+                        }, 3000)
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={async () => {
+                      const input = document.querySelector<HTMLInputElement>('input[placeholder="Paste code from Claude..."]')
+                      const code = input?.value?.trim()
+                      if (!code) return
+                      await api.post('/api/claude/login-pty/input', { data: code + '\n' }).catch(() => {})
+                      if (input) input.value = ''
+                      setTimeout(async () => {
+                        const status = await api.get<any>('/api/claude/status').catch(() => null)
+                        if (status?.cliLoggedIn) {
+                          setClaudeStatus(status)
+                          setClaudeLoginUrl(null)
+                        }
+                      }, 3000)
+                    }}
+                    className="shrink-0 rounded-[0.375rem] px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110"
+                    style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}
+                  >
+                    Submit
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Check connection */}
             <button
               onClick={async () => {
                 setClaudeLoggingIn(true)
                 try {
                   const status = await api.get<any>('/api/claude/status')
                   setClaudeStatus(status)
-                  if (!status.cliLoggedIn) {
-                    // Show a brief message
-                    alert('Not authenticated yet. Run "claude auth login" in the Terminal tab.')
-                  }
                 } catch { /* ignore */ }
                 finally { setClaudeLoggingIn(false) }
               }}
               disabled={claudeLoggingIn}
-              className="rounded-[0.375rem] px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}
+              className="rounded-[0.375rem] px-4 py-2 text-xs font-medium text-[var(--muted-foreground)] transition-all hover:text-white"
+              style={{ border: '1px solid rgba(72,72,71,0.2)' }}
             >
               {claudeLoggingIn ? 'Checking...' : 'Check Connection'}
             </button>
