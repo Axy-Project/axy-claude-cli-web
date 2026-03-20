@@ -100,7 +100,7 @@ router.post('/login', async (req: AuthenticatedRequest, res) => {
       output += text
 
       // Extract OAuth URL from output
-      const urlMatch = output.match(/(https:\/\/(?:platform\.claude\.com|console\.anthropic\.com)[^\s]+)/)
+      const urlMatch = output.match(/(https:\/\/(?:platform\.claude\.com|console\.anthropic\.com|claude\.ai)[^\s]+)/)
       if (urlMatch && !entry.url) {
         entry.url = urlMatch[1]
         entry.status = 'awaiting_auth'
