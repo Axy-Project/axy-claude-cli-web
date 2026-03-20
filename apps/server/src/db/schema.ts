@@ -6,10 +6,19 @@ export const users = pgTable('users', {
   supabaseId: text('supabase_id').unique().notNull(),
   email: text('email').notNull(),
   displayName: text('display_name').notNull(),
+  passwordHash: text('password_hash'),
   avatarUrl: text('avatar_url'),
   githubUsername: text('github_username'),
   githubTokenEncrypted: text('github_token_encrypted'),
+  isAdmin: boolean('is_admin').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
+// ─── System Settings ────────────────────────────────────
+export const systemSettings = pgTable('system_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
@@ -64,6 +73,8 @@ export const projects = pgTable('projects', {
   permissionMode: text('permission_mode').notNull().default('default'),
   githubAccountId: uuid('github_account_id').references(() => connectedAccounts.id, { onDelete: 'set null' }),
   claudeAccountId: uuid('claude_account_id').references(() => connectedAccounts.id, { onDelete: 'set null' }),
+  autoPushToGithub: boolean('auto_push_to_github').notNull().default(false),
+  autoDeployOnChange: boolean('auto_deploy_on_change').notNull().default(false),
   isArchived: boolean('is_archived').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -77,9 +88,11 @@ export const sessions = pgTable('sessions', {
   title: text('title'),
   model: text('model').notNull().default('claude-sonnet-4-6'),
   mode: text('mode').notNull().default('code'),
-  cliSessionId: text('cli_session_id'), // Claude CLI session ID for --resume
+  effort: text('effort').notNull().default('medium'),
+  cliSessionId: text('cli_session_id'),
   parentSessionId: uuid('parent_session_id'),
   isActive: boolean('is_active').notNull().default(true),
+  isPinned: integer('is_pinned').default(0),
   totalInputTokens: integer('total_input_tokens').notNull().default(0),
   totalOutputTokens: integer('total_output_tokens').notNull().default(0),
   totalCostUsd: real('total_cost_usd').notNull().default(0),
@@ -222,6 +235,22 @@ export const webhooks = pgTable('webhooks', {
   lastTriggeredAt: timestamp('last_triggered_at', { withTimezone: true }),
   lastStatus: integer('last_status'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
+// ─── Notes ──────────────────────────────────────────────
+export const notes = pgTable('notes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  content: text('content').notNull().default(''),
+  color: text('color').notNull().default('#7c3aed'),
+  isPinned: boolean('is_pinned').notNull().default(false),
+  isHandwritten: boolean('is_handwritten').notNull().default(false),
+  canvasDataJson: text('canvas_data_json'),
+  tags: jsonb('tags').default([]),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 // ─── MCP Servers ─────────────────────────────────────────
