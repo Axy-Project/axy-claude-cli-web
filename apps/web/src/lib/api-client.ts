@@ -2,7 +2,16 @@ import type { ApiResponse } from '@axy/shared'
 
 function getApiUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL
-  if (typeof window !== 'undefined') return `http://${window.location.hostname}:3456`
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname, port } = window.location
+    // Behind reverse proxy (standard port 80/443): use same origin
+    // Nginx should proxy /api/* to backend:3456
+    if (port === '' || port === '80' || port === '443') {
+      return `${protocol}//${hostname}`
+    }
+    // Local dev: frontend on 3457, backend on 3456
+    return `${protocol}//${hostname}:3456`
+  }
   return 'http://localhost:3456'
 }
 

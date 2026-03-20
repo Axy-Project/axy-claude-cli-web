@@ -12,7 +12,16 @@ type ConnectionStateHandler = (state: WsConnectionState) => void
 
 function getWsUrl(): string {
   if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL
-  if (typeof window !== 'undefined') return `ws://${window.location.hostname}:3456`
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname, port } = window.location
+    const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
+    // Behind reverse proxy (standard port): use same host, nginx proxies /ws
+    if (port === '' || port === '80' || port === '443') {
+      return `${wsProtocol}//${hostname}`
+    }
+    // Local dev: backend on 3456
+    return `${wsProtocol}//${hostname}:3456`
+  }
   return 'ws://localhost:3456'
 }
 
