@@ -44,7 +44,10 @@ export default function UserSettingsPage() {
     cliLoggedIn: boolean; cliEmail: string | null; cliAuthMethod: string | null; cliSubscription: string | null
   } | null>(null)
   const [claudeLoginUrl, setClaudeLoginUrl] = useState<string | null>(null)
+  const [claudeAuthUrl, setClaudeAuthUrl] = useState<string | null>(null)
+  const [claudeAuthCode, setClaudeAuthCode] = useState('')
   const [claudeLoggingIn, setClaudeLoggingIn] = useState(false)
+  const [claudeSubmitting, setClaudeSubmitting] = useState(false)
   const [claudeLoginPollRef] = useState<{ current: ReturnType<typeof setInterval> | null }>({ current: null })
 
   useEffect(() => {
@@ -407,7 +410,7 @@ export default function UserSettingsPage() {
           </div>
         ) : (
           <div className="mt-3 space-y-3">
-            {/* Embedded terminal for claude auth login */}
+            {/* Terminal */}
             <div className="overflow-hidden rounded-[0.5rem]" style={{ border: '1px solid rgba(72,72,71,0.2)' }}>
               <div className="flex items-center justify-between px-3 py-2" style={{ background: '#131313', borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
                 <div className="flex items-center gap-2">
@@ -422,16 +425,15 @@ export default function UserSettingsPage() {
                   <button
                     onClick={async () => {
                       setClaudeLoggingIn(true)
+                      setClaudeAuthUrl(null)
+                      setClaudeLoginUrl(null)
                       try {
                         await api.post('/api/claude/login-pty/start', {})
-                        // Poll output
                         const poll = setInterval(async () => {
                           try {
                             const res = await api.get<{ output: string; status: string; authUrl?: string }>('/api/claude/login-pty/output')
                             setClaudeLoginUrl(res.output)
-                            if (res.authUrl) {
-                              (window as any).__claudeAuthUrl = res.authUrl
-                            }
+                            if (res.authUrl) setClaudeAuthUrl(res.authUrl)
                             if (res.status === 'done') {
                               clearInterval(poll)
                               api.get<any>('/api/claude/status').then(setClaudeStatus).catch(() => {})
@@ -443,80 +445,77 @@ export default function UserSettingsPage() {
                       } catch { setClaudeLoggingIn(false) }
                     }}
                     disabled={claudeLoggingIn}
-                    className="rounded px-2 py-0.5 text-[10px] font-medium text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/10"
+                    className="rounded px-2 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--primary)]/10"
                   >
-                    {claudeLoggingIn ? 'Starting...' : 'Run'}
+                    {claudeLoggingIn ? 'Running...' : 'Run'}
                   </button>
                 )}
               </div>
               <div className="h-36 overflow-auto p-3 font-mono text-xs leading-relaxed" style={{ background: '#0a0a0a', color: '#c9d1d9' }}>
                 {!claudeLoginUrl ? (
-                  <p style={{ color: '#767575' }}>Click &quot;Run&quot; to start authentication...</p>
+                  <p style={{ color: '#767575' }}>Click &quot;Run&quot; to start...</p>
                 ) : (
                   <pre className="whitespace-pre-wrap break-all">{claudeLoginUrl}</pre>
                 )}
               </div>
             </div>
 
-            {/* Auth URL + Code input */}
-            {(window as any).__claudeAuthUrl && (
-              <a
-                href={(window as any).__claudeAuthUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+            {/* Auth URL button */}
+            {claudeAuthUrl && (
+              <a href={claudeAuthUrl} target="_blank" rel="noopener noreferrer"
                 className="block w-full rounded-[0.375rem] px-4 py-2 text-center text-sm font-medium text-white transition-all hover:brightness-110"
-                style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}
-              >
+                style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}>
                 1. Open Authorization Page
               </a>
             )}
 
+            {/* Code input */}
             {claudeLoginUrl && (
               <div>
                 <p className="mb-2 text-xs text-[var(--muted-foreground)]">2. Paste the authentication code:</p>
                 <div className="flex gap-2">
                   <input
                     type="text"
+                    value={claudeAuthCode}
+                    onChange={(e) => setClaudeAuthCode(e.target.value)}
                     placeholder="Paste code from Claude..."
                     className="flex-1 rounded-[0.375rem] px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-[var(--muted-foreground)]/50 focus:ring-1 focus:ring-[var(--primary)]"
                     style={{ background: '#000', border: '1px solid rgba(72,72,71,0.2)' }}
-                    onKeyDown={async (e) => {
-                      if (e.key === 'Enter') {
-                        const input = e.currentTarget
-                        const code = input.value.trim()
-                        if (!code) return
-                        await api.post('/api/claude/login-pty/input', { data: code + '\n' }).catch(() => {})
-                        input.value = ''
-                        // Poll for auth
-                        setTimeout(async () => {
-                          const status = await api.get<any>('/api/claude/status').catch(() => null)
-                          if (status?.cliLoggedIn) {
-                            setClaudeStatus(status)
-                            setClaudeLoginUrl(null)
-                          }
-                        }, 3000)
-                      }
-                    }}
                   />
                   <button
                     onClick={async () => {
-                      const input = document.querySelector<HTMLInputElement>('input[placeholder="Paste code from Claude..."]')
-                      const code = input?.value?.trim()
-                      if (!code) return
-                      await api.post('/api/claude/login-pty/input', { data: code + '\n' }).catch(() => {})
-                      if (input) input.value = ''
-                      setTimeout(async () => {
-                        const status = await api.get<any>('/api/claude/status').catch(() => null)
-                        if (status?.cliLoggedIn) {
-                          setClaudeStatus(status)
-                          setClaudeLoginUrl(null)
-                        }
-                      }, 3000)
+                      if (!claudeAuthCode.trim()) return
+                      setClaudeSubmitting(true)
+                      try {
+                        await api.post('/api/claude/login-pty/input', { data: claudeAuthCode.trim() + '\n' })
+                        setClaudeAuthCode('')
+                        // Poll for completion
+                        let attempts = 0
+                        const poll = setInterval(async () => {
+                          attempts++
+                          try {
+                            const res = await api.get<{ output: string; status: string }>('/api/claude/login-pty/output')
+                            setClaudeLoginUrl(res.output)
+                            const status = await api.get<any>('/api/claude/status')
+                            if (status.cliLoggedIn) {
+                              clearInterval(poll)
+                              setClaudeStatus(status)
+                              setClaudeLoginUrl(null)
+                              setClaudeAuthUrl(null)
+                              setClaudeSubmitting(false)
+                            } else if (attempts >= 15) {
+                              clearInterval(poll)
+                              setClaudeSubmitting(false)
+                            }
+                          } catch { /* ignore */ }
+                        }, 2000)
+                      } catch { setClaudeSubmitting(false) }
                     }}
-                    className="shrink-0 rounded-[0.375rem] px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110"
+                    disabled={!claudeAuthCode.trim() || claudeSubmitting}
+                    className="shrink-0 rounded-[0.375rem] px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-40"
                     style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}
                   >
-                    Submit
+                    {claudeSubmitting ? 'Verifying...' : 'Submit Code'}
                   </button>
                 </div>
               </div>
@@ -533,7 +532,7 @@ export default function UserSettingsPage() {
                 finally { setClaudeLoggingIn(false) }
               }}
               disabled={claudeLoggingIn}
-              className="rounded-[0.375rem] px-4 py-2 text-xs font-medium text-[var(--muted-foreground)] transition-all hover:text-white"
+              className="rounded-[0.375rem] px-4 py-2 text-xs font-medium text-[var(--muted-foreground)] hover:text-white"
               style={{ border: '1px solid rgba(72,72,71,0.2)' }}
             >
               {claudeLoggingIn ? 'Checking...' : 'Check Connection'}
