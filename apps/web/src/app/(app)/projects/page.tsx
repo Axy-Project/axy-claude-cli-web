@@ -62,7 +62,7 @@ function GitHubIcon() {
 /* ───────────────────── Permission mode colors ────────────────────── */
 
 const permissionColors: Record<string, string> = {
-  default: 'bg-[#bd9dff]/10 text-[#bd9dff] border border-[#bd9dff]/20',
+  default: 'bg-[#bd9dff]/10 text-[var(--primary)] border border-[#bd9dff]/20',
   accept_edits: 'bg-[#ffa5d9]/10 text-[#ffa5d9] border border-[#ffa5d9]/20',
   plan: 'bg-[#3bfb8c]/10 text-[#3bfb8c] border border-[#3bfb8c]/20',
   bypass: 'bg-[#ff6e84]/10 text-[#ff6e84] border border-[#ff6e84]/20',
@@ -82,7 +82,7 @@ function ProjectCard({ project }: { project: Project }) {
     <Link
       href={`/projects/${project.id}`}
       className="group relative flex flex-col justify-between overflow-hidden rounded-[0.75rem] p-6 transition-all duration-300 hover:border-[rgba(189,157,255,0.2)]"
-      style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.15)', minHeight: '160px' }}
+      style={{ background: 'var(--surface-mid)', border: '1px solid rgba(72,72,71,0.15)', minHeight: '160px' }}
     >
       {/* Hover overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#bd9dff]/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
@@ -100,11 +100,11 @@ function ProjectCard({ project }: { project: Project }) {
 
         {/* Description */}
         {project.description ? (
-          <p className="line-clamp-2 text-sm leading-relaxed text-[#adaaaa]">
+          <p className="line-clamp-2 text-sm leading-relaxed text-[var(--secondary-foreground)]">
             {project.description}
           </p>
         ) : (
-          <p className="text-sm italic text-[#767575]">
+          <p className="text-sm italic text-[var(--muted-foreground)]">
             No description provided
           </p>
         )}
@@ -113,12 +113,12 @@ function ProjectCard({ project }: { project: Project }) {
       {/* Footer */}
       <div className="relative mt-auto flex items-center gap-2 pt-5">
         {project.githubRepoFullName && (
-          <span className="inline-flex items-center gap-1.5 text-xs text-[#767575]">
+          <span className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
             <GitHubIcon />
             <span className="max-w-[160px] truncate">{project.githubRepoFullName}</span>
           </span>
         )}
-        <span className="ml-auto text-xs text-[#767575]/70">
+        <span className="ml-auto text-xs text-[var(--muted-foreground)]/70">
           {formatDate(project.updatedAt)}
         </span>
       </div>
@@ -156,7 +156,7 @@ function ProjectSection({
           className="flex flex-1 items-center gap-3 text-left"
         >
           <ChevronDownIcon
-            className={`shrink-0 text-[#adaaaa] transition-transform duration-200 ${
+            className={`shrink-0 text-[var(--secondary-foreground)] transition-transform duration-200 ${
               expanded ? '' : '-rotate-90'
             }`}
           />
@@ -167,17 +167,17 @@ function ProjectSection({
               className="h-6 w-6 rounded-full object-cover ring-1 ring-[rgba(72,72,71,0.2)]"
             />
           ) : (
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#262626] text-[#adaaaa]">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--surface-highest)] text-[var(--secondary-foreground)]">
               {icon}
             </span>
           )}
-          <span className="font-label text-xs font-semibold uppercase tracking-widest text-[#adaaaa]">{title}</span>
+          <span className="font-label text-xs font-semibold uppercase tracking-widest text-[var(--secondary-foreground)]">{title}</span>
         </button>
 
         <Link
           href={newProjectHref}
-          className="inline-flex items-center gap-1.5 rounded-[0.375rem] px-3 py-1.5 text-xs font-medium text-[#adaaaa] transition-colors hover:text-white"
-          style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}
+          className="inline-flex items-center gap-1.5 rounded-[0.375rem] px-3 py-1.5 text-xs font-medium text-[var(--secondary-foreground)] transition-colors hover:text-white"
+          style={{ background: 'var(--surface-mid)', border: '1px solid rgba(72,72,71,0.2)' }}
         >
           <PlusIcon />
           New Project
@@ -188,11 +188,11 @@ function ProjectSection({
       {expanded && (
         <div className="pt-2">
           {projects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-[0.75rem] bg-[#131313] py-12 text-center">
-              <div className="mb-3 text-[#adaaaa]/30">
+            <div className="flex flex-col items-center justify-center rounded-[0.75rem] bg-[var(--surface-low)] py-12 text-center">
+              <div className="mb-3 text-[var(--secondary-foreground)]/30">
                 <FolderIcon />
               </div>
-              <p className="text-sm text-[#adaaaa]">No projects yet</p>
+              <p className="text-sm text-[var(--secondary-foreground)]">No projects yet</p>
               <Link
                 href={newProjectHref}
                 className="mt-4 inline-flex items-center gap-1.5 rounded-[0.375rem] px-4 py-2 text-xs font-medium text-white transition-all hover:brightness-110"
@@ -273,11 +273,11 @@ export default function ProjectsPage() {
           <div className="flex items-baseline gap-3">
             <h1 className="font-headline text-4xl font-bold tracking-tight text-white">Projects</h1>
             {!isLoading && (
-              <span className="font-headline text-4xl font-light text-[#bd9dff]">{projects.length}</span>
+              <span className="font-headline text-4xl font-light text-[var(--primary)]">{projects.length}</span>
             )}
           </div>
           {!isLoading && (
-            <p className="mt-2 max-w-lg text-sm leading-relaxed text-[#adaaaa]">
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-[var(--secondary-foreground)]">
               Orchestrate your development lifecycle. Manage workspace-specific deployments, repository links, and bypass configurations from a single curated terminal.
             </p>
           )}
