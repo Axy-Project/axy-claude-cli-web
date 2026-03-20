@@ -355,7 +355,7 @@ export default function SetupPage() {
                               setIsSubmitting(true)
                               setError(null)
                               try {
-                                const result = await api.post<{ outputLength: number; status: string }>('/api/claude/login-pty/input', { data: authCode.trim() + '\n' })
+                                const result = await api.post<{ outputLength: number; status: string }>('/api/claude/login-pty/input', { data: authCode.trim() + '\r' })
                                 setAuthCode('')
 
                                 // Poll for auth completion (check every 2s for 30s)

@@ -487,7 +487,7 @@ export default function UserSettingsPage() {
                       if (!claudeAuthCode.trim()) return
                       setClaudeSubmitting(true)
                       try {
-                        await api.post('/api/claude/login-pty/input', { data: claudeAuthCode.trim() + '\n' })
+                        await api.post('/api/claude/login-pty/input', { data: claudeAuthCode.trim() + '\r' })
                         setClaudeAuthCode('')
                         // Poll for completion
                         let attempts = 0
