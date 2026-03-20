@@ -64,21 +64,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated])
 
-  // Check for updates every 10 minutes
+  // Check for updates every 10 minutes — compare local version against GitHub directly
   useEffect(() => {
     if (!isAuthenticated) return
     const checkUpdate = async () => {
       try {
-        // Use fetch directly — health endpoint doesn't wrap in {success, data}
+        // Get current version from our API
         const apiUrl = typeof window !== 'undefined'
           ? (window.location.port === '' || window.location.port === '80' || window.location.port === '443')
             ? `${window.location.protocol}//${window.location.hostname}`
             : `${window.location.protocol}//${window.location.hostname}:3456`
           : ''
-        const res = await fetch(`${apiUrl}/api/health/version`)
-        if (res.ok) {
-          const data: UpdateInfo = await res.json()
-          if (data.updateAvailable) setUpdateInfo(data)
+        const healthRes = await fetch(`${apiUrl}/api/health`)
+        if (!healthRes.ok) return
+        const health = await healthRes.json()
+        const current = health.version
+
+        // Get latest version directly from GitHub (no backend cache)
+        const ghRes = await fetch('https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/VERSION')
+        if (!ghRes.ok) return
+        const latest = (await ghRes.text()).trim()
+
+        if (latest !== current) {
+          setUpdateInfo({ current, latest, updateAvailable: true })
         }
       } catch { /* ignore */ }
     }
