@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-03-20
+
+### Fixed
+- Server binds `0.0.0.0` in production (was `127.0.0.1`, broke Docker)
+- Default port changed to `3456` (was `3001`, inconsistent with Dockerfile)
+- API/WS URLs respect reverse proxy — no more mixed content behind HTTPS
+- PostgreSQL schema synced with SQLite (missing `systemSettings`, `passwordHash`, `isAdmin`, `notes`, `effort`)
+- OAuth URL regex now matches `claude.ai` domain
+- Login page redirects to setup wizard on first launch
+- Better Claude CLI error messages (distinguishes "not installed" vs "auth failed")
+
+### Changed
+- New "Terminal Curator" design system with glassmorphism, gradient CTAs, Space Grotesk typography
+- Redesigned: login, setup wizard, sidebar (collapsible), topbar (profile dropdown), projects, dashboard, chat, agents, skills
+- Chat: Session Metrics sidebar, message labels, code blocks with macOS header
+- Sidebar: collapsible icon-only mode
+- Topbar: notification bell, help icon, avatar with profile dropdown
+
+---
+
 ## [1.0.0] - 2025-03-20
 
 ### Added
