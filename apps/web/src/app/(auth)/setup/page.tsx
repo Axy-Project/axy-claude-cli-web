@@ -11,6 +11,7 @@ export default function SetupPage() {
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', displayName: '' })
   const [loginUrl, setLoginUrl] = useState<string | null>(null)
   const [authUrl, setAuthUrl] = useState<string | null>(null)
+  const [authCode, setAuthCode] = useState('')
   const [loginStatus, setLoginStatus] = useState<string>('none')
   const [cliEmail, setCliEmail] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -325,7 +326,7 @@ export default function SetupPage() {
                   </div>
 
                   {/* Show clickable auth link — URL extracted server-side to avoid PTY corruption */}
-                  {authUrl ? (
+                  {authUrl ? (<>
                       <a
                         href={authUrl}
                         target="_blank"
@@ -333,9 +334,48 @@ export default function SetupPage() {
                         className="mt-3 block w-full rounded-[0.375rem] px-4 py-2.5 text-center text-sm font-medium text-white transition-all hover:brightness-110"
                         style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
                       >
-                        Open Authorization Page
+                        1. Open Authorization Page
                       </a>
-                  ) : null}
+
+                      {/* Code input — paste the code from Claude */}
+                      <div className="mt-3">
+                        <p className="mb-2 text-xs" style={{ color: '#adaaaa' }}>2. Paste the authentication code here:</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={authCode}
+                            onChange={(e) => setAuthCode(e.target.value)}
+                            placeholder="Paste code from Claude..."
+                            className="flex-1 rounded-[0.375rem] px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-[#767575]/50 focus:ring-1 focus:ring-[#bd9dff]"
+                            style={{ background: '#000000', border: '1px solid rgba(72,72,71,0.2)' }}
+                          />
+                          <button
+                            onClick={async () => {
+                              if (!authCode.trim()) return
+                              try {
+                                await api.post('/api/claude/login-pty/input', { data: authCode.trim() + '\n' })
+                                setAuthCode('')
+                                // Poll for completion
+                                setTimeout(async () => {
+                                  const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
+                                  if (status.cliLoggedIn) {
+                                    setCliEmail(status.cliEmail)
+                                    setLoginStatus('success')
+                                  }
+                                }, 3000)
+                              } catch (err) {
+                                setError((err as Error).message)
+                              }
+                            }}
+                            disabled={!authCode.trim()}
+                            className="shrink-0 rounded-[0.375rem] px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-40"
+                            style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+                          >
+                            Submit
+                          </button>
+                        </div>
+                      </div>
+                  </>) : null}
                 </>
               )}
 
