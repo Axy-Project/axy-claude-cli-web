@@ -251,8 +251,27 @@ export default function SetupPage() {
             <div className="p-6">
               <h2 className="text-lg font-semibold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Sign in to Claude</h2>
               <p className="mt-1 text-sm" style={{ color: '#adaaaa' }}>
-                Connect your Claude account to start chatting. This uses the same login as the Claude CLI.
+                Connect your Claude account to start chatting.
               </p>
+
+              {/* Instructions */}
+              <div className="mt-4 rounded-[0.375rem] px-4 py-3" style={{ background: 'rgba(189,157,255,0.06)', border: '1px solid rgba(189,157,255,0.15)' }}>
+                <p className="text-xs font-medium text-white">How to authenticate:</p>
+                <ol className="mt-2 space-y-1.5 text-xs" style={{ color: '#adaaaa' }}>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold" style={{ background: 'rgba(189,157,255,0.15)', color: '#bd9dff' }}>1</span>
+                    <span>Create a project and open the <strong className="text-white">Terminal</strong> tab</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold" style={{ background: 'rgba(189,157,255,0.15)', color: '#bd9dff' }}>2</span>
+                    <span>Run: <code className="rounded px-1.5 py-0.5 text-[#bd9dff]" style={{ background: '#0e0e0e' }}>claude auth login</code></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold" style={{ background: 'rgba(189,157,255,0.15)', color: '#bd9dff' }}>3</span>
+                    <span>Follow the link to authorize, then return here</span>
+                  </li>
+                </ol>
+              </div>
 
               {loginStatus === 'success' || cliEmail ? (
                 <div
@@ -296,45 +315,22 @@ export default function SetupPage() {
                       setIsSubmitting(true)
                       setError(null)
                       try {
-                        // Check if already logged in
                         const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
                         if (status.cliLoggedIn && status.cliEmail) {
                           setCliEmail(status.cliEmail)
                           setLoginStatus('success')
-                          return
-                        }
-                        // Start login flow
-                        const result = await api.post<{ url: string | null; status: string; error?: string }>('/api/claude/login', {})
-                        if (result.url) {
-                          setLoginUrl(result.url)
-                          setLoginStatus('awaiting_auth')
-                          // Poll for completion
-                          const poll = setInterval(async () => {
-                            try {
-                              const s = await api.get<{ status: string; email?: string }>('/api/claude/login/status')
-                              if (s.status === 'success') {
-                                clearInterval(poll)
-                                setLoginStatus('success')
-                                setCliEmail(s.email || null)
-                              }
-                            } catch { /* ignore */ }
-                          }, 2000)
-                          // Stop polling after 5 minutes
-                          setTimeout(() => clearInterval(poll), 300000)
-                        } else if (result.status === 'cli_not_installed') {
-                          setError(result.error || 'Claude CLI is not installed. Install it with: docker exec -it <container> npm install -g @anthropic-ai/claude-code')
                         } else {
-                          setError('Could not start Claude login. Try running: docker exec -it <server-container> claude auth login')
+                          setError('Not authenticated yet. Run "claude auth login" in the Terminal tab of any project.')
                         }
                       } catch (err) {
                         setError((err as Error).message)
                       } finally { setIsSubmitting(false) }
                     }}
-                    disabled={isSubmitting || loginStatus === 'awaiting_auth'}
-                    className="flex-1 rounded-[0.375rem] px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100"
+                    disabled={isSubmitting}
+                    className="flex-1 rounded-[0.375rem] px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
                     style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
                   >
-                    {isSubmitting ? 'Connecting...' : loginStatus === 'awaiting_auth' ? 'Waiting...' : 'Sign in to Claude'}
+                    {isSubmitting ? 'Checking...' : 'Check Connection'}
                   </button>
                 )}
 

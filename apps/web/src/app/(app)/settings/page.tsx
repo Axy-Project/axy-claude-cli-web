@@ -406,50 +406,33 @@ export default function UserSettingsPage() {
             </button>
           </div>
         ) : (
-          <div className="mt-3">
-            {claudeLoginUrl ? (
-              <div className="space-y-2">
-                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2">
-                  <p className="text-xs font-medium text-yellow-400">Waiting for authorization...</p>
-                </div>
-                <a
-                  href={claudeLoginUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full rounded-lg bg-[var(--primary)] px-4 py-2 text-center text-sm font-medium text-white transition-opacity hover:opacity-90"
-                >
-                  Open Claude Login Page
-                </a>
-              </div>
-            ) : (
-              <button
-                onClick={async () => {
-                  setClaudeLoggingIn(true)
-                  try {
-                    const result = await api.post<{ url: string | null }>('/api/claude/login', {})
-                    if (result.url) {
-                      setClaudeLoginUrl(result.url)
-                      claudeLoginPollRef.current = setInterval(async () => {
-                        try {
-                          const s = await api.get<{ status: string; email?: string }>('/api/claude/login/status')
-                          if (s.status === 'success') {
-                            if (claudeLoginPollRef.current) clearInterval(claudeLoginPollRef.current)
-                            setClaudeLoggingIn(false)
-                            setClaudeLoginUrl(null)
-                            api.get<any>('/api/claude/status').then(setClaudeStatus).catch(() => {})
-                          }
-                        } catch { /* ignore */ }
-                      }, 2000)
-                      setTimeout(() => { if (claudeLoginPollRef.current) clearInterval(claudeLoginPollRef.current); setClaudeLoggingIn(false) }, 300000)
-                    }
-                  } catch { setClaudeLoggingIn(false) }
-                }}
-                disabled={claudeLoggingIn}
-                className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {claudeLoggingIn ? 'Connecting...' : 'Sign in to Claude'}
-              </button>
-            )}
+          <div className="mt-3 space-y-3">
+            <div className="rounded-[0.375rem] px-4 py-3 text-xs" style={{ background: 'rgba(189,157,255,0.06)', border: '1px solid rgba(189,157,255,0.15)' }}>
+              <p className="font-medium text-[var(--foreground)]">To authenticate:</p>
+              <p className="mt-1 text-[var(--muted-foreground)]">
+                Open the <strong className="text-[var(--foreground)]">Terminal</strong> tab in any project and run:
+              </p>
+              <code className="mt-1.5 block rounded bg-[var(--background)] px-2.5 py-1.5 font-mono text-[var(--primary)]">claude auth login</code>
+            </div>
+            <button
+              onClick={async () => {
+                setClaudeLoggingIn(true)
+                try {
+                  const status = await api.get<any>('/api/claude/status')
+                  setClaudeStatus(status)
+                  if (!status.cliLoggedIn) {
+                    // Show a brief message
+                    alert('Not authenticated yet. Run "claude auth login" in the Terminal tab.')
+                  }
+                } catch { /* ignore */ }
+                finally { setClaudeLoggingIn(false) }
+              }}
+              disabled={claudeLoggingIn}
+              className="rounded-[0.375rem] px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}
+            >
+              {claudeLoggingIn ? 'Checking...' : 'Check Connection'}
+            </button>
           </div>
         )}
       </div>
