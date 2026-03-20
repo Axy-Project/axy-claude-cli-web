@@ -531,17 +531,18 @@ const UserMessageView = memo(function UserMessageView({ msg }: { msg: Message })
   const images = msg.contentJson.filter((b) => b.type === 'image')
   const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   return (
-    <div className="py-4">
+    <div className="py-5">
       {/* Label */}
       <div className="mb-3 text-right">
-        <span className="font-label text-[10px] font-semibold uppercase tracking-widest text-[#adaaaa]">
+        <span className="font-label text-[10px] font-semibold uppercase tracking-[0.15em] text-[#767575]">
           USER // LOCALHOST
-          <span className="ml-2 text-[#adaaaa]/50">{time}</span>
+          <span className="ml-1 text-[#767575]">&#8226;</span>
+          <span className="ml-1">{time}</span>
         </span>
       </div>
       {/* Message bubble */}
-      <div className="rounded-[0.75rem] bg-[#1a1a1a] px-6 py-5" style={{ borderLeft: '2px solid rgba(189,157,255,0.3)' }}>
-        <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-[#e0e0e0]">
+      <div className="rounded-[0.75rem] bg-[#1a1a1a] px-7 py-6" style={{ borderLeft: '3px solid rgba(189,157,255,0.25)' }}>
+        <pre className="whitespace-pre-wrap font-sans text-[16px] leading-[1.7] text-[#e8e8e8]">
           {text}
         </pre>
         {images.length > 0 && (
@@ -673,18 +674,18 @@ const AssistantMessageView = memo(function AssistantMessageView({ msg }: { msg: 
   const modelLabel = msg.model?.replace('claude-', '').replace(/-\d+$/, '').toUpperCase() || 'CLAUDE'
 
   return (
-    <div className="py-4">
+    <div className="py-5">
       {/* Label */}
       <div className="mb-3 flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-[#3bfb8c]" />
-        <span className="font-label text-[10px] font-semibold uppercase tracking-widest text-[#adaaaa]">
+        <span className="font-label text-[10px] font-semibold uppercase tracking-[0.15em] text-[#767575]">
           CLAUDE // {modelLabel}
-          <span className="ml-2 text-[#adaaaa]/50">{time}</span>
+          <span className="ml-2">{time}</span>
         </span>
       </div>
 
       {/* Message content */}
-      <div className="rounded-[0.75rem] bg-[#131313] px-6 py-5" style={{ borderLeft: '2px solid rgba(59,251,140,0.3)' }}>
+      <div className="rounded-[0.75rem] bg-[#131313] px-7 py-6" style={{ borderLeft: '3px solid rgba(59,251,140,0.25)' }}>
         {/* Thinking */}
         {thinkingBlocks.map((tb, i) => (
           <ThinkingBlockView key={`t-${i}`} thinking={tb.thinking} durationMs={tb.durationMs} />
@@ -2044,6 +2045,17 @@ export default function ChatSessionPage() {
           </div>
         )}
 
+        {/* Engine badge + shortcut */}
+        <div className="flex items-center justify-center gap-3 pb-2">
+          <span className="flex items-center gap-1.5 rounded-sm px-2 py-0.5 font-label text-[9px] font-bold uppercase tracking-[0.15em] text-[#767575]" style={{ background: '#131313', border: '1px solid rgba(72,72,71,0.12)' }}>
+            <span className="h-1.5 w-1.5 rounded-full bg-[#3bfb8c]" />
+            ENGINE: {modelShort.toUpperCase().replace(/ /g, '_')}
+          </span>
+          <span className="rounded-sm px-2 py-0.5 font-label text-[9px] font-bold uppercase tracking-[0.15em] text-[#767575]" style={{ background: '#131313', border: '1px solid rgba(72,72,71,0.12)' }}>
+            CMD + ENTER TO SEND
+          </span>
+        </div>
+
         <ChatInput
           sessionId={sessionId}
           isStreaming={isStreaming}
@@ -2098,6 +2110,24 @@ export default function ChatSessionPage() {
               Export Markdown
             </button>
             <TaskPanel projectId={projectId} sessionId={sessionId} />
+          </div>
+
+          <div className="my-2" style={{ borderTop: '1px solid rgba(72,72,71,0.12)' }} />
+
+          {/* Quick actions */}
+          <h3 className="font-label text-[10px] font-bold uppercase tracking-[0.15em] text-[#adaaaa]">Quick Actions</h3>
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                const { useTerminalStore } = require('@/stores/terminal.store')
+                useTerminalStore.getState().togglePanel(projectId)
+              }}
+              className="flex w-full items-center gap-2 rounded-[0.375rem] px-3 py-2 text-xs text-[#adaaaa] transition-colors hover:text-white"
+              style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              Toggle Terminal
+            </button>
           </div>
 
           <div className="my-2" style={{ borderTop: '1px solid rgba(72,72,71,0.12)' }} />

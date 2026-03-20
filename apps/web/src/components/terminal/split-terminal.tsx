@@ -78,17 +78,7 @@ export function SplitTerminal({ projectId, children }: SplitTerminalProps) {
         <div className="relative h-full">
           {children}
           {/* Floating terminal toggle button — only when panel is closed */}
-          {!isOpen && (
-            <button
-              onClick={() => togglePanel(projectId)}
-              className="absolute right-3 top-1 z-10 flex h-7 items-center gap-1.5 rounded-[0.375rem] px-2.5 text-[10px] font-medium text-[#adaaaa] transition-all hover:text-white"
-              style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}
-              title="Open Terminal (split view)"
-            >
-              <Terminal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Terminal</span>
-            </button>
-          )}
+          {/* Terminal toggle removed from here — now in sidebar panel */}
         </div>
       </div>
 

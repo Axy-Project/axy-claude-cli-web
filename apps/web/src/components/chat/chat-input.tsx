@@ -458,7 +458,7 @@ export const ChatInput = memo(function ChatInput({
             onPaste={handlePaste}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            placeholder={isListening ? 'Listening...' : 'Message... (⌘/Ctrl+Enter)'}
+            placeholder={isListening ? 'Listening...' : 'Type a command or message...'}
             rows={1}
             className={`w-full resize-none rounded-[0.375rem] px-4 py-3 pr-20 text-[15px] text-white outline-none transition-colors placeholder:text-[#adaaaa]/50 focus:ring-1 focus:ring-[#bd9dff]/50 md:text-sm ${isListening ? 'ring-1 ring-red-500/50 bg-red-500/5' : ''}`}
             style={{ background: '#000000', border: '1px solid rgba(72,72,71,0.2)', maxHeight: '120px' }}
@@ -500,11 +500,11 @@ export const ChatInput = memo(function ChatInput({
         <button
           onClick={handleSend}
           disabled={!input.trim() && attachedImages.length === 0}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.5rem] text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-30"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-30"
           style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
           </svg>
         </button>
       </div>
