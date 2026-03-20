@@ -3,7 +3,8 @@ import dotenv from 'dotenv'
 dotenv.config({ path: '../../.env' })
 
 export const config = {
-  port: parseInt(process.env.SERVER_PORT || '3001', 10),
+  port: parseInt(process.env.SERVER_PORT || '3456', 10),
+  host: process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'),
   nodeEnv: process.env.NODE_ENV || 'development',
   isDev: process.env.NODE_ENV !== 'production',
 
@@ -41,8 +42,5 @@ if (Number.isNaN(config.port) || config.port <= 0 || config.port > 65535) {
 if (config.nodeEnv === 'production') {
   if (config.jwtSecret === 'dev-secret-change-in-production') {
     throw new Error('CRITICAL: JWT_SECRET must be set in production. Do not use the default secret.')
-  }
-  if (!config.supabaseUrl) {
-    console.warn('[config] WARNING: SUPABASE_URL is not set in production. Auth features will be unavailable.')
   }
 }

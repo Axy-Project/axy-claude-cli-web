@@ -102,7 +102,7 @@ process.on('SIGTERM', () => shutdown('SIGTERM'))
 process.on('SIGINT', () => shutdown('SIGINT'))
 
 // Start server
-server.listen(config.port, '127.0.0.1', () => {
+server.listen(config.port, config.host, () => {
   logger.info('Server started', {
     version: '0.1.0',
     port: config.port,
