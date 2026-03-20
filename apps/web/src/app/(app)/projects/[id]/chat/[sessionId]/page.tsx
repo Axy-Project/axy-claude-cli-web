@@ -442,7 +442,7 @@ const markdownComponents: Components = {
     if (!isBlock) {
       return (
         <code
-          className="rounded bg-[var(--secondary)] px-1.5 py-0.5 text-[0.85em] text-[var(--primary)] before:content-[''] after:content-['']"
+          className="rounded bg-[#1a1a1a] px-1.5 py-0.5 text-[0.85em] text-[#bd9dff] before:content-[''] after:content-['']"
           {...props}
         >
           {children}
@@ -458,10 +458,23 @@ const markdownComponents: Components = {
       return <ArtifactPreview content={code} language={lang} />
     }
 
-    // Fenced code block with syntax highlighting
+    // Fenced code block with syntax highlighting + macOS header
+    const filename = lang ? `file.${lang}` : 'code'
     return (
       <>
-        <CopyCodeButton code={code} />
+        <div className="flex items-center justify-between px-4 py-2" style={{ borderBottom: '1px solid rgba(72,72,71,0.1)' }}>
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+            </div>
+            <span className="font-mono text-[11px] text-[#767575]">{filename}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <CopyCodeButton code={code} />
+          </div>
+        </div>
         <SyntaxHighlighter
           style={oneDark}
           language={match?.[1] || 'text'}
@@ -469,9 +482,10 @@ const markdownComponents: Components = {
           customStyle={{
             margin: 0,
             borderRadius: 0,
-            fontSize: '0.8rem',
-            lineHeight: '1.5',
+            fontSize: '0.82rem',
+            lineHeight: '1.6',
             background: 'transparent',
+            padding: '1rem 1.25rem',
           }}
         >
           {code}
@@ -481,7 +495,7 @@ const markdownComponents: Components = {
   },
   pre({ children }) {
     return (
-      <div className="group relative my-3 overflow-hidden rounded-lg border border-[var(--border)] bg-[#282c34]">
+      <div className="group relative my-4 overflow-hidden rounded-[0.75rem] bg-[#0e0e0e]" style={{ border: '1px solid rgba(72,72,71,0.1)' }}>
         {children}
       </div>
     )
@@ -517,7 +531,7 @@ const markdownComponents: Components = {
 
 function MarkdownContent({ content }: { content: string }) {
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-[var(--foreground)] prose-headings:font-semibold prose-p:text-[var(--foreground)] prose-p:leading-relaxed prose-strong:text-[var(--foreground)] prose-a:text-[var(--primary)] prose-a:underline prose-li:text-[var(--foreground)] prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 prose-table:m-0">
+    <div className="prose prose-base dark:prose-invert max-w-none prose-headings:font-headline prose-headings:font-semibold prose-headings:text-[#bd9dff] prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-h4:text-sm prose-p:text-[16px] prose-p:leading-[1.7] prose-p:text-[#e0e0e0] prose-strong:text-white prose-em:text-[#adaaaa] prose-a:text-[#bd9dff] prose-a:underline prose-li:text-[16px] prose-li:leading-[1.7] prose-li:text-[#e0e0e0] prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 prose-table:m-0 prose-blockquote:border-[#bd9dff]/30 prose-blockquote:text-[#adaaaa]">
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} components={markdownComponents}>{content}</ReactMarkdown>
     </div>
   )
