@@ -545,18 +545,18 @@ const UserMessageView = memo(function UserMessageView({ msg }: { msg: Message })
   const images = msg.contentJson.filter((b) => b.type === 'image')
   const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   return (
-    <div className="py-5">
+    <div className="py-5" style={{ borderTop: '1px solid rgba(72,72,71,0.08)' }}>
       {/* Label */}
       <div className="mb-3 text-right">
         <span className="font-label text-[10px] font-semibold uppercase tracking-[0.15em] text-[#767575]">
           USER // LOCALHOST
-          <span className="ml-1 text-[#767575]">&#8226;</span>
+          <span className="ml-1">&#8226;</span>
           <span className="ml-1">{time}</span>
         </span>
       </div>
       {/* Message bubble */}
-      <div className="rounded-[0.75rem] bg-[#1a1a1a] px-7 py-6" style={{ borderLeft: '3px solid rgba(189,157,255,0.25)' }}>
-        <pre className="whitespace-pre-wrap font-sans text-[16px] leading-[1.7] text-[#e8e8e8]">
+      <div className="rounded-[0.75rem] px-7 py-6" style={{ background: 'rgba(26,26,26,0.6)', border: '1px solid rgba(72,72,71,0.12)', borderLeft: '3px solid rgba(189,157,255,0.3)' }}>
+        <pre className="whitespace-pre-wrap font-sans text-[16px] leading-[1.7] text-[#e0e0e0]">
           {text}
         </pre>
         {images.length > 0 && (
@@ -688,7 +688,7 @@ const AssistantMessageView = memo(function AssistantMessageView({ msg }: { msg: 
   const modelLabel = msg.model?.replace('claude-', '').replace(/-\d+$/, '').toUpperCase() || 'CLAUDE'
 
   return (
-    <div className="py-5">
+    <div className="py-5" style={{ borderTop: '1px solid rgba(72,72,71,0.08)' }}>
       {/* Label */}
       <div className="mb-3 flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-[#3bfb8c]" />
@@ -699,7 +699,7 @@ const AssistantMessageView = memo(function AssistantMessageView({ msg }: { msg: 
       </div>
 
       {/* Message content */}
-      <div className="rounded-[0.75rem] bg-[#131313] px-7 py-6" style={{ borderLeft: '3px solid rgba(59,251,140,0.25)' }}>
+      <div className="rounded-[0.75rem] px-7 py-6" style={{ background: 'rgba(19,19,19,0.6)', border: '1px solid rgba(72,72,71,0.12)', borderLeft: '3px solid rgba(59,251,140,0.25)' }}>
         {/* Thinking */}
         {thinkingBlocks.map((tb, i) => (
           <ThinkingBlockView key={`t-${i}`} thinking={tb.thinking} durationMs={tb.durationMs} />
@@ -1125,7 +1125,7 @@ export default function ChatSessionPage() {
   const [showScrollButton, setShowScrollButton] = useState(false)
   // Message search
   const [showSearch, setShowSearch] = useState(false)
-  const [showMetrics, setShowMetrics] = useState(true)
+  const [showMetrics, setShowMetrics] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchHighlightIndex, setSearchHighlightIndex] = useState(-1)
   // Loading more messages (pagination)
@@ -1753,13 +1753,19 @@ export default function ChatSessionPage() {
       {/* LEFT: Chat area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 
-      {/* Session header — minimal, no duplicate project info */}
-      <div className="mb-2 flex items-center justify-between gap-2 pb-2" style={{ borderBottom: '1px solid rgba(72,72,71,0.12)' }}>
+      {/* Session header — compact, no title */}
+      <div className="mb-1 flex items-center justify-between gap-2 pb-1">
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0">
-            <h1 className="truncate font-headline text-sm font-medium tracking-tight text-white">
-              {currentSession?.title || 'Chat Session'}
-            </h1>
+            <div className="flex items-center gap-2 text-[11px] text-[#767575]">
+              <span className="truncate">{currentSession?.title || 'Chat Session'}</span>
+              {isStreaming && (
+                <span className="flex items-center gap-1 text-amber-400">
+                  <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                  streaming
+                </span>
+              )}
+            </div>
             {currentSession?.parentSessionId && parentSessionTitle && (
               <button
                 type="button"
@@ -1771,16 +1777,6 @@ export default function ChatSessionPage() {
                 </svg>
                 Branched from: {parentSessionTitle}
               </button>
-            )}
-            {/* Streaming indicator inline */}
-            {isStreaming && (
-              <span className="flex items-center gap-1 text-[10px] text-amber-400">
-                <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                streaming...
-              </span>
             )}
           </div>
         </div>
@@ -1832,10 +1828,11 @@ export default function ChatSessionPage() {
         </div>
       )}
 
-      {/* Messages area */}
+      {/* Messages area — with subtle ambient glow */}
       <div
         ref={scrollRef}
-        className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth"
+        className="custom-scrollbar relative min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth"
+        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(189,157,255,0.03) 0%, transparent 60%)' }}
       >
         {/* Loading more messages indicator */}
         {loadingMore && (

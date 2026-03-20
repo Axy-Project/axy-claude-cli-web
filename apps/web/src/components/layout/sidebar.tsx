@@ -59,12 +59,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 px-6">
           <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--primary-dim)]">
-              <span className="font-headline text-sm font-bold text-white">A</span>
+            <img src="/logo.png" alt="Axy" className="h-8 w-8 rounded-lg" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            <div>
+              <span className="font-headline text-base font-bold tracking-tight text-white">Axy</span>
+              <p className="text-[9px] leading-tight text-[#767575]">Claude CLI from your browser</p>
             </div>
-            <span className="font-headline text-base font-semibold tracking-tight text-[var(--foreground)]">
-              Claude CLI
-            </span>
           </Link>
           {/* Close button - mobile */}
           <button
