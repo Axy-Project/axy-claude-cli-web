@@ -45,6 +45,7 @@ const app = express()
 const server = createServer(app)
 
 // Middleware
+app.set('trust proxy', 1) // Trust first proxy (Nginx, Cloudflare, etc.)
 app.use(corsMiddleware)
 app.use(express.json({ limit: '50mb' }))
 app.use(requestLogger)
