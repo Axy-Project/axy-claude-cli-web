@@ -67,12 +67,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Check for updates every 10 minutes
   useEffect(() => {
     if (!isAuthenticated) return
-    const checkUpdate = () => {
-      api.get<UpdateInfo>('/api/health/version')
-        .then((data) => {
+    const checkUpdate = async () => {
+      try {
+        // Use fetch directly — health endpoint doesn't wrap in {success, data}
+        const apiUrl = typeof window !== 'undefined'
+          ? (window.location.port === '' || window.location.port === '80' || window.location.port === '443')
+            ? `${window.location.protocol}//${window.location.hostname}`
+            : `${window.location.protocol}//${window.location.hostname}:3456`
+          : ''
+        const res = await fetch(`${apiUrl}/api/health/version`)
+        if (res.ok) {
+          const data: UpdateInfo = await res.json()
           if (data.updateAvailable) setUpdateInfo(data)
-        })
-        .catch(() => {})
+        }
+      } catch { /* ignore */ }
     }
     checkUpdate()
     const interval = setInterval(checkUpdate, 10 * 60 * 1000)
