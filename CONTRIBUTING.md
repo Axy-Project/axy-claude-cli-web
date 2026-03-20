@@ -27,7 +27,7 @@ Thank you for your interest in contributing to Axy Web. This document outlines h
 
 ```bash
 # Clone the repository
-git clone https://github.com/Axy-Project/AxyWeb.git
+git clone https://github.com/Axy-Project/axy-claude-cli-web.git
 cd AxyWeb
 
 # Install dependencies

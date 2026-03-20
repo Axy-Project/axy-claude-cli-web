@@ -30,8 +30,8 @@ The production Docker Compose uses pre-built images from GitHub Container Regist
 mkdir axy-web && cd axy-web
 
 # Download production compose file and example env
-curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/docker-compose.prod.yml -o docker-compose.yml
-curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/.env.example -o .env
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/docker-compose.prod.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/.env.example -o .env
 
 # Generate secrets
 sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=$(openssl rand -hex 24)/" .env
@@ -66,7 +66,7 @@ Open `http://your-server:3457` to complete the setup wizard.
 The one-liner install script handles everything:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/scripts/install.sh | bash
 ```
 
 This script:
@@ -83,7 +83,7 @@ This script:
 ### Option 1: Docker Compose (Recommended)
 
 1. In your Dokploy or Coolify dashboard, create a new **Compose** service
-2. Point to the repository: `https://github.com/Axy-Project/AxyWeb.git`
+2. Point to the repository: `https://github.com/Axy-Project/axy-claude-cli-web.git`
 3. Set the compose file to `docker-compose.prod.yml`
 4. Add environment variables in the panel:
    - `DB_PASSWORD` (required)
@@ -123,7 +123,7 @@ For environments without Docker.
 
 ```bash
 # Clone repository
-git clone https://github.com/Axy-Project/AxyWeb.git
+git clone https://github.com/Axy-Project/axy-claude-cli-web.git
 cd AxyWeb
 
 # Install dependencies

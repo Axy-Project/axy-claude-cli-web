@@ -5,7 +5,7 @@
 
 set -e
 
-REPO="https://github.com/Axy-Project/AxyWeb.git"
+REPO="https://github.com/Axy-Project/axy-claude-cli-web.git"
 BRANCH="main"
 
 echo "🔄 Checking for updates..."
@@ -15,7 +15,7 @@ CURRENT_VERSION=$(cat VERSION 2>/dev/null || echo "unknown")
 echo "   Current version: $CURRENT_VERSION"
 
 # Fetch latest version from GitHub
-LATEST_VERSION=$(curl -sf "https://raw.githubusercontent.com/Axy-Project/AxyWeb/$BRANCH/VERSION" 2>/dev/null || echo "unknown")
+LATEST_VERSION=$(curl -sf "https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/$BRANCH/VERSION" 2>/dev/null || echo "unknown")
 echo "   Latest version:  $LATEST_VERSION"
 
 if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then

@@ -28,7 +28,7 @@ router.get('/', (_req, res) => {
 /** GET /api/health/version - Check for updates */
 router.get('/version', async (_req, res) => {
   try {
-    const response = await fetch('https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/VERSION')
+    const response = await fetch('https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/VERSION')
     if (response.ok) {
       const latestVersion = (await response.text()).trim()
       res.json({

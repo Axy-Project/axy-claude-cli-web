@@ -3,7 +3,7 @@
 # Uses pre-built images from GitHub Container Registry
 #
 # Deploy:
-#   curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/docker-compose.prod.yml -o docker-compose.yml
+#   curl -fsSL https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/docker-compose.prod.yml -o docker-compose.yml
 #   cp .env.example .env  # edit with your keys
 #   docker compose up -d
 #

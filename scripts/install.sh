@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # Axy Web - One-line installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/scripts/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/scripts/install.sh | bash
 # =============================================================================
 
 set -e
@@ -32,8 +32,8 @@ cd "$INSTALL_DIR"
 
 # Download production compose file
 echo "⬇️  Downloading config..."
-curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/docker-compose.prod.yml -o docker-compose.yml
-curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/.env.example -o .env.example
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/docker-compose.prod.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/.env.example -o .env.example
 
 # Create .env if it doesn't exist
 if [ ! -f .env ]; then

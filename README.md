@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logos/axy-logo.png" alt="Axy Web" width="120" />
+  <img src="logos/axy_transparent.png" alt="Axy Web" width="120" />
 </p>
 
 <h1 align="center">Axy Web</h1>
@@ -11,9 +11,9 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" /></a>
-  <a href="https://github.com/Axy-Project/AxyWeb/releases"><img src="https://img.shields.io/github/v/release/Axy-Project/AxyWeb" alt="Version" /></a>
-  <a href="https://github.com/Axy-Project/AxyWeb/pkgs/container/axyweb-server"><img src="https://img.shields.io/badge/docker-ghcr.io-blue" alt="Docker" /></a>
-  <a href="https://github.com/Axy-Project/AxyWeb/actions"><img src="https://img.shields.io/github/actions/workflow/status/Axy-Project/AxyWeb/build.yml" alt="Build" /></a>
+  <a href="https://github.com/Axy-Project/axy-claude-cli-web/releases"><img src="https://img.shields.io/github/v/release/Axy-Project/axy-claude-cli-web" alt="Version" /></a>
+  <a href="https://github.com/Axy-Project/axy-claude-cli-web/pkgs/container/axyweb-server"><img src="https://img.shields.io/badge/docker-ghcr.io-blue" alt="Docker" /></a>
+  <a href="https://github.com/Axy-Project/axy-claude-cli-web/actions"><img src="https://img.shields.io/github/actions/workflow/status/Axy-Project/axy-claude-cli-web/release.yml" alt="Build" /></a>
 </p>
 
 <p align="center">
@@ -37,7 +37,7 @@
 Deploy the full stack with a single command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/scripts/install.sh | bash
 ```
 
 This pulls pre-built Docker images, generates secrets, and starts everything. Open `http://localhost:3457` and complete the setup wizard.
@@ -86,8 +86,8 @@ This pulls pre-built Docker images, generates secrets, and starts everything. Op
 ```bash
 # Download compose file
 mkdir axy-web && cd axy-web
-curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/docker-compose.prod.yml -o docker-compose.yml
-curl -fsSL https://raw.githubusercontent.com/Axy-Project/AxyWeb/main/.env.example -o .env
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/docker-compose.prod.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/Axy-Project/axy-claude-cli-web/main/.env.example -o .env
 
 # Edit .env with your configuration
 nano .env
