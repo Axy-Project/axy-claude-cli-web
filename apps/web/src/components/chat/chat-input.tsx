@@ -451,7 +451,7 @@ export const ChatInput = memo(function ChatInput({
             onDragOver={handleDragOver}
             placeholder={isListening ? 'Listening...' : 'Type a command or message...'}
             rows={1}
-            className={`w-full resize-none bg-transparent px-0 py-1 pr-16 text-[15px] text-white outline-none placeholder:text-[#767575]/70 ${isListening ? 'text-red-300' : ''}`}
+            className={`w-full resize-none border-none bg-transparent px-0 py-1 pr-16 text-[15px] text-white outline-none ring-0 placeholder:text-[#767575]/70 focus:border-none focus:outline-none focus:ring-0 ${isListening ? 'text-red-300' : ''}`}
             style={{ maxHeight: '120px' }}
           />
           {/* Mic + Attach inside textarea area */}
@@ -476,10 +476,10 @@ export const ChatInput = memo(function ChatInput({
         <button
           onClick={handleSend}
           disabled={!input.trim() && attachedImages.length === 0}
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[0.5rem] text-white transition-all hover:brightness-110 disabled:opacity-25"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[0.625rem] transition-all hover:brightness-110 disabled:opacity-25"
           style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
         >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#2a0066" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
           </svg>
         </button>

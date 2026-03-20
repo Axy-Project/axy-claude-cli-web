@@ -1982,9 +1982,9 @@ export default function ChatSessionPage() {
         )}
       </div>
 
-      {/* Input area - safe-area bottom padding for mobile notch devices */}
-      <div className="shrink-0 border-t border-[var(--border)] pt-2 md:pt-3" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        {/* Agent orchestration panel */}
+      {/* Input area */}
+      <div className="shrink-0 pt-2 md:pt-3" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {/* Agent orchestration panel (only when agent is active) */}
         <AgentOrchestrationPanel
           activeAgent={activeAgent}
           reasoning={agentReasoning}
@@ -1996,76 +1996,13 @@ export default function ChatSessionPage() {
           isVisible={!!activeAgent}
         />
 
-        {/* Custom agent selector */}
-        {!activeAgent && customAgents.length > 0 && (
-          <div className="relative mb-2">
-            <button
-              type="button"
-              onClick={() => setShowCustomAgentPicker(!showCustomAgentPicker)}
-              className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--secondary)]/50 px-2.5 py-1.5 text-xs text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Select Agent ({customAgents.length})
-              <svg className={`h-3 w-3 transition-transform ${showCustomAgentPicker ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {showCustomAgentPicker && (
-              <div className="absolute bottom-full left-0 z-20 mb-1 max-h-52 w-72 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--card)] shadow-xl">
-                <div className="sticky top-0 bg-[var(--card)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-                  Your Agents
-                </div>
-                {customAgents.filter(a => a.isActive !== false).map((agent) => (
-                  <button
-                    key={agent.id}
-                    onClick={() => {
-                      setAgent(
-                        {
-                          id: agent.id,
-                          name: agent.name,
-                          role: agent.role || 'general',
-                          description: agent.description || '',
-                          systemPrompt: agent.systemPrompt || '',
-                          model: agent.model || 'claude-sonnet-4-6',
-                          icon: agent.icon || '🤖',
-                          color: agent.color || '#6366f1',
-                        },
-                        `Custom agent: ${agent.name}`
-                      )
-                      setShowCustomAgentPicker(false)
-                    }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-[var(--accent)]"
-                  >
-                    <span
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm"
-                      style={{ backgroundColor: (agent.color || '#6366f1') + '20' }}
-                    >
-                      {agent.icon || '🤖'}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <span className="block text-xs font-medium text-[var(--foreground)]">
-                        {agent.name}
-                      </span>
-                      <span className="block truncate text-[10px] text-[var(--muted-foreground)]">
-                        {agent.description || agent.role || 'Custom agent'}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Engine badge + shortcut */}
-        <div className="flex items-center justify-center gap-3 pb-2">
-          <span className="flex items-center gap-1.5 rounded-sm px-2 py-0.5 font-label text-[9px] font-bold uppercase tracking-[0.15em] text-[#767575]" style={{ background: '#131313', border: '1px solid rgba(72,72,71,0.12)' }}>
-            <span className="h-1.5 w-1.5 rounded-full bg-[#3bfb8c]" />
+        {/* Engine badge + shortcut — right-aligned like reference */}
+        <div className="flex items-center justify-end gap-2 pb-2">
+          <span className="flex items-center gap-2 rounded-[0.375rem] px-3 py-1.5 font-label text-[11px] font-semibold uppercase tracking-[0.12em] text-[#adaaaa]" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}>
+            <span className="h-2 w-2 rounded-full bg-[#3bfb8c]" />
             ENGINE: {modelShort.toUpperCase().replace(/ /g, '_')}
           </span>
-          <span className="rounded-sm px-2 py-0.5 font-label text-[9px] font-bold uppercase tracking-[0.15em] text-[#767575]" style={{ background: '#131313', border: '1px solid rgba(72,72,71,0.12)' }}>
+          <span className="rounded-[0.375rem] px-3 py-1.5 font-label text-[11px] font-semibold uppercase tracking-[0.12em] text-[#adaaaa]" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}>
             CMD + ENTER TO SEND
           </span>
         </div>
