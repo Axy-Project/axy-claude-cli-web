@@ -49,29 +49,49 @@ router.post('/update', async (_req, res) => {
   try {
     const { exec } = await import('child_process')
 
-    // Respond immediately — the server will restart
-    res.json({ success: true, message: 'Update started. Server will restart in ~30 seconds.' })
+    // Check if Docker socket is available
+    const { existsSync } = await import('fs')
+    if (!existsSync('/var/run/docker.sock')) {
+      res.status(400).json({
+        success: false,
+        error: 'Docker socket not mounted. Add docker.sock volume to enable self-update.',
+      })
+      return
+    }
 
-    // Run update in background after response is sent
+    // Respond immediately — the server will restart
+    res.json({ success: true, message: 'Update started. Server will restart shortly.' })
+
+    // Pull new images and recreate containers via Docker API
     setTimeout(() => {
-      const cwd = process.cwd()
-      // Try docker compose first (pre-built images), fallback to git pull + build
-      const updateCmd = `
-        cd "${cwd}/../.." 2>/dev/null || cd "${cwd}" ;
-        if [ -f docker-compose.yml ]; then
-          docker compose pull 2>/dev/null && docker compose up -d 2>/dev/null
-        elif [ -f docker-compose.prod.yml ]; then
-          docker compose -f docker-compose.prod.yml pull 2>/dev/null && docker compose -f docker-compose.prod.yml up -d 2>/dev/null
-        else
-          git pull origin main 2>/dev/null && docker compose build --no-cache 2>/dev/null && docker compose up -d 2>/dev/null
-        fi
-      `
-      exec(updateCmd, { timeout: 300000 }, (error, stdout, stderr) => {
-        if (error) {
-          console.error('[Update] Failed:', error.message)
-        } else {
-          console.log('[Update] Success:', stdout)
+      // Get own container ID to find the compose project
+      const containerId = require('fs').readFileSync('/proc/1/cpuset', 'utf-8').trim().split('/').pop() || ''
+
+      // Pull latest images for all services with the same compose project
+      const pullCmd = `docker pull ghcr.io/axy-project/axyweb-server:latest && docker pull ghcr.io/axy-project/axyweb-web:latest`
+
+      exec(pullCmd, { timeout: 120000 }, (pullErr, pullOut) => {
+        if (pullErr) {
+          console.error('[Update] Pull failed:', pullErr.message)
+          return
         }
+        console.log('[Update] Images pulled:', pullOut)
+
+        // Find and restart compose project
+        // Use docker inspect to find the compose project label
+        const restartCmd = `docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' $(hostname) 2>/dev/null`
+        exec(restartCmd, { timeout: 10000 }, (inspErr, workDir) => {
+          const dir = workDir?.trim()
+          if (dir) {
+            exec(`cd "${dir}" && docker compose up -d`, { timeout: 120000 }, (upErr, upOut) => {
+              if (upErr) console.error('[Update] Restart failed:', upErr.message)
+              else console.log('[Update] Restarted:', upOut)
+            })
+          } else {
+            // Fallback: just restart own container
+            exec(`docker restart $(hostname)`, { timeout: 30000 }, () => {})
+          }
+        })
       })
     }, 1000)
   } catch (error) {

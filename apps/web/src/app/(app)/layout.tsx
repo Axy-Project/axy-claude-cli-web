@@ -129,17 +129,45 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => {
-                  const cmd = 'docker compose pull && docker compose up -d'
-                  navigator.clipboard.writeText(cmd).then(() => {
-                    setIsUpdating(true)
-                    setTimeout(() => setIsUpdating(false), 2000)
-                  }).catch(() => {})
+                onClick={async () => {
+                  if (!confirm(`Update from v${updateInfo.current} to v${updateInfo.latest}?\n\nThe server will restart. This may take up to a minute.`)) return
+                  setIsUpdating(true)
+                  try {
+                    const apiUrl = typeof window !== 'undefined'
+                      ? (window.location.port === '' || window.location.port === '80' || window.location.port === '443')
+                        ? `${window.location.protocol}//${window.location.hostname}`
+                        : `${window.location.protocol}//${window.location.hostname}:3456`
+                      : ''
+                    const res = await fetch(`${apiUrl}/api/health/update`, { method: 'POST' })
+                    const data = await res.json()
+                    if (!data.success) {
+                      alert(data.error || 'Update failed')
+                      setIsUpdating(false)
+                      return
+                    }
+                    // Poll until server comes back with new version
+                    const pollUpdate = setInterval(async () => {
+                      try {
+                        const r = await fetch(`${apiUrl}/api/health`)
+                        if (r.ok) {
+                          const h = await r.json()
+                          if (h.version !== updateInfo.current) {
+                            clearInterval(pollUpdate)
+                            setIsUpdating(false)
+                            setUpdateDismissed(true)
+                            window.location.reload()
+                          }
+                        }
+                      } catch { /* server restarting */ }
+                    }, 5000)
+                    setTimeout(() => { clearInterval(pollUpdate); setIsUpdating(false) }, 180000)
+                  } catch { setIsUpdating(false) }
                 }}
-                className="rounded-[0.375rem] px-3 py-1 text-[11px] font-medium text-white transition-all hover:brightness-110"
+                disabled={isUpdating}
+                className="rounded-[0.375rem] px-3 py-1 text-[11px] font-medium text-white transition-all hover:brightness-110 disabled:opacity-60"
                 style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}
               >
-                {isUpdating ? 'Copied!' : 'Copy Update Command'}
+                {isUpdating ? 'Updating...' : 'Update Now'}
               </button>
               <a
                 href="https://github.com/Axy-Project/axy-claude-cli-web/releases"
