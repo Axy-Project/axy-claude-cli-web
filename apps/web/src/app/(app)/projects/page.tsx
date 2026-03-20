@@ -81,19 +81,19 @@ function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       href={`/projects/${project.id}`}
-      className="card-hover group relative flex flex-col overflow-hidden rounded-[0.75rem] bg-[#1a1a1a] p-5 transition-all duration-300"
+      className="group relative flex flex-col justify-between overflow-hidden rounded-[0.75rem] p-6 transition-all duration-300 hover:border-[rgba(189,157,255,0.2)]"
+      style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.15)', minHeight: '160px' }}
     >
-      {/* Hover overlay gradient */}
+      {/* Hover overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#bd9dff]/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-      {/* Content */}
       <div className="relative">
-        {/* Top: name + badges */}
-        <div className="mb-3 flex items-start justify-between gap-2">
-          <h3 className="truncate font-headline text-base font-semibold leading-tight text-white">
+        {/* Top row: name + badge */}
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <h3 className="font-headline text-lg font-bold leading-tight text-white">
             {project.name}
           </h3>
-          <span className={`shrink-0 rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${permissionColors[project.permissionMode] || permissionColors.default}`}>
+          <span className={`shrink-0 rounded-[0.25rem] px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${permissionColors[project.permissionMode] || permissionColors.default}`}>
             {permissionLabels[project.permissionMode] || project.permissionMode}
           </span>
         </div>
@@ -104,28 +104,23 @@ function ProjectCard({ project }: { project: Project }) {
             {project.description}
           </p>
         ) : (
-          <p className="text-sm italic text-[#adaaaa]/40">
+          <p className="text-sm italic text-[#767575]">
             No description provided
           </p>
         )}
+      </div>
 
-        {/* Footer */}
-        <div className="mt-4 flex flex-wrap items-center gap-2 pt-3">
-          {project.githubRepoFullName && (
-            <span className="inline-flex items-center gap-1.5 text-xs text-[#adaaaa]">
-              <GitHubIcon />
-              <span className="max-w-[160px] truncate">{project.githubRepoFullName}</span>
-            </span>
-          )}
-          {project.isArchived && (
-            <span className="rounded-sm bg-[#262626] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#adaaaa]">
-              Archived
-            </span>
-          )}
-          <span className="ml-auto text-xs text-[#adaaaa]/50">
-            {formatDate(project.updatedAt)}
+      {/* Footer */}
+      <div className="relative mt-auto flex items-center gap-2 pt-5">
+        {project.githubRepoFullName && (
+          <span className="inline-flex items-center gap-1.5 text-xs text-[#767575]">
+            <GitHubIcon />
+            <span className="max-w-[160px] truncate">{project.githubRepoFullName}</span>
           </span>
-        </div>
+        )}
+        <span className="ml-auto text-xs text-[#767575]/70">
+          {formatDate(project.updatedAt)}
+        </span>
       </div>
     </Link>
   )
