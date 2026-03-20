@@ -105,14 +105,21 @@ process.on('SIGTERM', () => shutdown('SIGTERM'))
 process.on('SIGINT', () => shutdown('SIGINT'))
 
 // Start server
-server.listen(config.port, config.host, () => {
+server.listen(config.port, config.host, async () => {
   logger.info('Server started', {
     version: '0.1.0',
     port: config.port,
+    host: config.host,
     environment: config.nodeEnv,
-    url: `http://localhost:${config.port}`,
-    ws: `ws://localhost:${config.port}/ws`,
+    url: `http://${config.host}:${config.port}`,
+    ws: `ws://${config.host}:${config.port}/ws`,
   })
+
+  // Warm catalog cache from GitHub
+  try {
+    const { catalogService } = await import('./services/catalog.service.js')
+    catalogService.warmCache()
+  } catch { /* ignore — catalog will be fetched on first request */ }
 })
 
 export default app

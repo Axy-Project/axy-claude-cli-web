@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { authMiddleware, type AuthenticatedRequest } from '../middleware/auth.js'
 import { param } from '../middleware/params.js'
 import { skillService } from '../services/skill.service.js'
-import { skillCatalog } from '../data/skill-catalog.js'
+import { catalogService } from '../services/catalog.service.js'
 
 const router = Router()
 router.use(authMiddleware)
@@ -10,7 +10,8 @@ router.use(authMiddleware)
 /** GET /api/skills/catalog */
 router.get('/catalog', async (_req, res) => {
   try {
-    res.json({ success: true, data: skillCatalog })
+    const catalog = await catalogService.getSkills()
+    res.json({ success: true, data: catalog })
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message })
   }
@@ -20,7 +21,8 @@ router.get('/catalog', async (_req, res) => {
 router.get('/catalog/:id', async (req, res) => {
   try {
     const id = param(req, 'id')
-    const skill = skillCatalog.find((s) => s.id === id)
+    const catalog = await catalogService.getSkills()
+    const skill = catalog.find((s: any) => s.id === id)
     if (!skill) {
       res.status(404).json({ success: false, error: 'Catalog skill not found' })
       return
@@ -35,7 +37,8 @@ router.get('/catalog/:id', async (req, res) => {
 router.post('/import/:catalogId', async (req: AuthenticatedRequest, res) => {
   try {
     const catalogId = param(req, 'catalogId')
-    const catalogSkill = skillCatalog.find((s) => s.id === catalogId)
+    const catalog = await catalogService.getSkills()
+    const catalogSkill = catalog.find((s: any) => s.id === catalogId)
     if (!catalogSkill) {
       res.status(404).json({ success: false, error: 'Catalog skill not found' })
       return

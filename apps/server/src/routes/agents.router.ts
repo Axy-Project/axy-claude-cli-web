@@ -3,7 +3,7 @@ import { authMiddleware, type AuthenticatedRequest } from '../middleware/auth.js
 import { param } from '../middleware/params.js'
 import { agentService } from '../services/agent.service.js'
 import { orchestratorService } from '../services/orchestrator.service.js'
-import { AGENT_CATALOG, getCatalogAgent, getCatalogCategories } from '../data/agent-catalog.js'
+import { catalogService } from '../services/catalog.service.js'
 
 const router = Router()
 router.use(authMiddleware)
@@ -11,12 +11,11 @@ router.use(authMiddleware)
 /** GET /api/agents/catalog - Returns the full agent catalog */
 router.get('/catalog', async (_req: AuthenticatedRequest, res) => {
   try {
+    const agents = await catalogService.getAgents()
+    const categories = [...new Set(agents.map((a: any) => a.category))]
     res.json({
       success: true,
-      data: {
-        agents: AGENT_CATALOG,
-        categories: getCatalogCategories(),
-      },
+      data: { agents, categories },
     })
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message })
@@ -27,7 +26,8 @@ router.get('/catalog', async (_req: AuthenticatedRequest, res) => {
 router.post('/import/:catalogId', async (req: AuthenticatedRequest, res) => {
   try {
     const catalogId = param(req, 'catalogId')
-    const catalogAgent = getCatalogAgent(catalogId)
+    const agents = await catalogService.getAgents()
+    const catalogAgent = agents.find((a: any) => a.id === catalogId)
 
     if (!catalogAgent) {
       res.status(404).json({ success: false, error: 'Catalog agent not found' })
