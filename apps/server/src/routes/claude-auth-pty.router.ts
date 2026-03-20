@@ -22,7 +22,7 @@ router.post('/start', async (req: AuthenticatedRequest, res) => {
   try {
     const ptyProcess = spawn(config.claudePath, ['auth', 'login'], {
       name: 'xterm-256color',
-      cols: 100,
+      cols: 2000, // Wide enough to prevent URL wrapping
       rows: 30,
       cwd: '/tmp',
       env: { ...process.env, NO_COLOR: '1', TERM: 'xterm-256color' } as Record<string, string>,
@@ -50,14 +50,35 @@ router.post('/start', async (req: AuthenticatedRequest, res) => {
   }
 })
 
-/** GET /api/claude/login-pty/output — Get current PTY output */
+/** GET /api/claude/login-pty/output — Get current PTY output + extracted URL */
 router.get('/output', async (req: AuthenticatedRequest, res) => {
   const entry = activePtys.get(req.userId!)
   if (!entry) {
-    res.json({ success: true, data: { output: '', status: 'none' } })
+    res.json({ success: true, data: { output: '', status: 'none', authUrl: null } })
     return
   }
-  res.json({ success: true, data: { output: entry.output, status: entry.status } })
+
+  // Extract the full OAuth URL server-side (no ANSI/wrapping issues)
+  let authUrl: string | null = null
+  // Strip all ANSI escape codes
+  const clean = entry.output
+    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+    .replace(/\x1b\][^\x07]*\x07/g, '')
+    .replace(/\r/g, '')
+  // Join all text removing newlines to handle wrapping
+  const joined = clean.replace(/\n/g, '')
+  // Find the OAuth URL
+  const urlMatch = joined.match(/(https:\/\/claude\.ai\/oauth\/authorize[^\s"'<>]+)/)
+    || joined.match(/(https:\/\/platform\.claude\.com\/oauth\/authorize[^\s"'<>]+)/)
+  if (urlMatch) {
+    authUrl = urlMatch[1]
+    // Ensure code_challenge_method is present
+    if (!authUrl.includes('code_challenge_method')) {
+      authUrl += '&code_challenge_method=S256'
+    }
+  }
+
+  res.json({ success: true, data: { output: entry.output, status: entry.status, authUrl } })
 })
 
 /** POST /api/claude/login-pty/input — Send input to PTY */

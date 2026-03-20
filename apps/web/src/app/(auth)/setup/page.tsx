@@ -10,6 +10,7 @@ export default function SetupPage() {
   const [step, setStep] = useState<'welcome' | 'create' | 'claude'>('welcome')
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', displayName: '' })
   const [loginUrl, setLoginUrl] = useState<string | null>(null)
+  const [authUrl, setAuthUrl] = useState<string | null>(null)
   const [loginStatus, setLoginStatus] = useState<string>('none')
   const [cliEmail, setCliEmail] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -287,8 +288,9 @@ export default function SetupPage() {
                               // Poll output
                               const poll = setInterval(async () => {
                                 try {
-                                  const res = await api.get<{ output: string; status: string }>('/api/claude/login-pty/output')
+                                  const res = await api.get<{ output: string; status: string; authUrl?: string }>('/api/claude/login-pty/output')
                                   setLoginUrl(res.output)
+                                  if (res.authUrl) setAuthUrl(res.authUrl)
                                   if (res.status === 'done') {
                                     clearInterval(poll)
                                     // Check if auth succeeded
@@ -322,19 +324,10 @@ export default function SetupPage() {
                     </div>
                   </div>
 
-                  {/* Extract and show clickable link */}
-                  {loginUrl && (() => {
-                    // Strip ANSI codes, then join all lines to handle URL wrapping
-                    const cleanOutput = loginUrl
-                      .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
-                      .replace(/\x1b\][^\x07]*\x07/g, '')
-                      .replace(/\r?\n/g, '') // join lines — URL wraps across lines in PTY
-                    const urlMatch = cleanOutput.match(/(https:\/\/claude\.ai\/oauth\/authorize\S+)/)
-                      || cleanOutput.match(/(https:\/\/claude\.ai[^\s"'<>]+)/)
-                      || cleanOutput.match(/(https:\/\/platform\.claude\.com[^\s"'<>]+)/)
-                    return urlMatch ? (
+                  {/* Show clickable auth link — URL extracted server-side to avoid PTY corruption */}
+                  {authUrl ? (
                       <a
-                        href={urlMatch[1]}
+                        href={authUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-3 block w-full rounded-[0.375rem] px-4 py-2.5 text-center text-sm font-medium text-white transition-all hover:brightness-110"
@@ -342,8 +335,7 @@ export default function SetupPage() {
                       >
                         Open Authorization Page
                       </a>
-                    ) : null
-                  })()}
+                  ) : null}
                 </>
               )}
 
