@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth.store'
 import { useChatStore } from '@/stores/chat.store'
+import { api } from '@/lib/api-client'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { CommandPalette } from '@/components/command-palette'
@@ -11,11 +12,19 @@ import { KeyboardShortcutsDialog } from '@/components/keyboard-shortcuts-dialog'
 import { useKeyboardShortcuts, type Shortcut } from '@/hooks/use-keyboard-shortcuts'
 import { wsClient, type WsConnectionState } from '@/lib/ws-client'
 
+interface UpdateInfo {
+  current: string
+  latest: string
+  updateAvailable: boolean
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { isAuthenticated, isLoading } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+  const [updateDismissed, setUpdateDismissed] = useState(false)
   const [wsState, setWsState] = useState<WsConnectionState>({
     connected: false,
     isReconnecting: false,
@@ -55,6 +64,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated])
 
+  // Check for updates every 10 minutes
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const checkUpdate = () => {
+      api.get<UpdateInfo>('/api/health/version')
+        .then((data) => {
+          if (data.updateAvailable) setUpdateInfo(data)
+        })
+        .catch(() => {})
+    }
+    checkUpdate()
+    const interval = setInterval(checkUpdate, 10 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [isAuthenticated])
+
   if (isLoading) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4">
@@ -74,6 +98,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-center gap-2 bg-[var(--primary-dim)] px-3 py-1.5 text-xs font-medium text-white">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white" />
             Reconnecting... (attempt {wsState.reconnectAttempt})
+          </div>
+        )}
+        {/* Update available banner */}
+        {updateInfo?.updateAvailable && !updateDismissed && (
+          <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-2" style={{ background: 'rgba(189,157,255,0.08)', borderBottom: '1px solid rgba(189,157,255,0.15)' }}>
+            <div className="flex items-center gap-2">
+              <svg className="h-4 w-4 text-[var(--primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              <span className="text-xs text-[var(--foreground)]">
+                Update available: <span className="font-mono font-semibold text-[var(--primary)]">v{updateInfo.latest}</span>
+                <span className="text-[var(--muted-foreground)]"> (current: v{updateInfo.current})</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <a
+                href="https://github.com/Axy-Project/axy-claude-cli-web/releases"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-[0.375rem] px-3 py-1 text-[11px] font-medium text-white transition-all hover:brightness-110"
+                style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}
+              >
+                View Update
+              </a>
+              <button
+                onClick={() => setUpdateDismissed(true)}
+                className="rounded p-0.5 text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
           </div>
         )}
         <Topbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
