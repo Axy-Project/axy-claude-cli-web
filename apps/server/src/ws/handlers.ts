@@ -42,13 +42,15 @@ export async function handleWsMessage(ws: AuthenticatedWebSocket, message: WsMes
     }
 
     case 'terminal:create-login': {
-      // Create a plain bash terminal for the user to run claude auth login manually
+      // Create a plain shell (no restricted ZDOTDIR) for claude auth login
       if (!ws.userId) break
       try {
+        const shell = process.platform === 'darwin' ? '/bin/zsh' : (process.env.SHELL || '/bin/bash')
         const terminalId = terminalService.create({
           userId: ws.userId,
           projectId: '__login__',
           projectPath: '/tmp',
+          command: shell,
         })
         ws.terminalSubscriptions.add(terminalId)
         ws.send(JSON.stringify({ type: 'terminal:created', data: { terminalId, projectId: '__login__' } }))
