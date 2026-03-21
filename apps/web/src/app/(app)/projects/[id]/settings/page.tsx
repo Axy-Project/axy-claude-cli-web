@@ -325,6 +325,49 @@ export default function ProjectSettingsPage() {
         )}
       </div>
 
+      {/* Full Backup Export */}
+      <div className="rounded-lg border border-[var(--border)] p-4">
+        <h3 className="font-medium">Full Backup</h3>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+          Download a complete backup of this project including all files, chat sessions, messages, tasks, and notes. Use this to transfer the project to another Axy server.
+        </p>
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const apiUrl = typeof window !== 'undefined'
+                  ? (window.location.port === '' || window.location.port === '80' || window.location.port === '443')
+                    ? `${window.location.protocol}//${window.location.hostname}`
+                    : `${window.location.protocol}//${window.location.hostname}:3456`
+                  : ''
+                const token = localStorage.getItem('axy_token')
+                const res = await fetch(`${apiUrl}/api/projects/${projectId}/export-backup`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                if (!res.ok) throw new Error('Export failed')
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `${project?.name || 'project'}-backup.zip`
+                a.click()
+                URL.revokeObjectURL(url)
+              } catch (err) {
+                console.error('Backup export error:', err)
+              }
+            }}
+            className="flex items-center gap-2 rounded-[0.375rem] px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110"
+            style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Download Full Backup (.zip)
+          </button>
+        </div>
+      </div>
+
       {/* Danger zone */}
       <div className="rounded-lg border border-[var(--destructive)] p-4">
         <h3 className="font-medium text-[var(--destructive)]">Danger Zone</h3>
