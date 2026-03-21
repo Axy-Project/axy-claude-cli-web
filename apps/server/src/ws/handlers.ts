@@ -41,6 +41,25 @@ export async function handleWsMessage(ws: AuthenticatedWebSocket, message: WsMes
       break
     }
 
+    case 'terminal:create-login': {
+      // Create a terminal that runs `claude auth login` directly — no project needed
+      if (!ws.userId) break
+      try {
+        const terminalId = terminalService.create({
+          userId: ws.userId,
+          projectId: '__login__',
+          projectPath: '/tmp',
+          command: 'claude',
+          args: ['auth', 'login'],
+        })
+        ws.terminalSubscriptions.add(terminalId)
+        ws.send(JSON.stringify({ type: 'terminal:created', data: { terminalId, projectId: '__login__' } }))
+      } catch (err) {
+        ws.send(JSON.stringify({ type: 'terminal:error', data: { error: 'Failed to start Claude login terminal' } }))
+      }
+      break
+    }
+
     case 'terminal:create': {
       const { projectId } = data as { projectId: string }
       if (!ws.userId) break

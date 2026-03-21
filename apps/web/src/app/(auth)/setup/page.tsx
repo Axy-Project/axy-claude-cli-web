@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api-client'
 import { useAuthStore } from '@/stores/auth.store'
+import { ClaudeLoginTerminal } from '@/components/claude-login-terminal'
 
 export default function SetupPage() {
   const router = useRouter()
@@ -253,7 +254,7 @@ export default function SetupPage() {
             <div className="p-6">
               <h2 className="text-lg font-semibold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Sign in to Claude</h2>
               <p className="mt-1 text-sm" style={{ color: '#adaaaa' }}>
-                Connect your Claude account to start chatting.
+                Connect your Claude account. Paste the code directly into the terminal below.
               </p>
 
               {loginStatus === 'success' || cliEmail ? (
@@ -265,137 +266,14 @@ export default function SetupPage() {
                   {cliEmail && <p className="mt-1 text-xs" style={{ color: '#adaaaa' }}>{cliEmail}</p>}
                 </div>
               ) : (
-                <>
-                  {/* Embedded terminal for claude auth login */}
-                  <div className="mt-4 overflow-hidden rounded-[0.5rem]" style={{ border: '1px solid rgba(72,72,71,0.2)' }}>
-                    {/* Terminal header */}
-                    <div className="flex items-center justify-between px-3 py-2" style={{ background: '#131313', borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1.5">
-                          <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-                          <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-                          <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-                        </div>
-                        <span className="font-mono text-[10px] text-[#767575]">claude auth login</span>
-                      </div>
-                      {!loginUrl && loginStatus !== 'awaiting_auth' && (
-                        <button
-                          onClick={async () => {
-                            setIsSubmitting(true)
-                            setError(null)
-                            try {
-                              await api.post('/api/claude/login-pty/start', {})
-                              setLoginStatus('awaiting_auth')
-                              // Poll output
-                              const poll = setInterval(async () => {
-                                try {
-                                  const res = await api.get<{ output: string; status: string; authUrl?: string }>('/api/claude/login-pty/output')
-                                  setLoginUrl(res.output)
-                                  if (res.authUrl) setAuthUrl(res.authUrl)
-                                  if (res.status === 'done') {
-                                    clearInterval(poll)
-                                    // Check if auth succeeded
-                                    const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
-                                    if (status.cliLoggedIn) {
-                                      setCliEmail(status.cliEmail)
-                                      setLoginStatus('success')
-                                    }
-                                  }
-                                } catch { /* ignore */ }
-                              }, 1500)
-                              setTimeout(() => clearInterval(poll), 300000)
-                            } catch (err) {
-                              setError((err as Error).message)
-                            } finally { setIsSubmitting(false) }
-                          }}
-                          disabled={isSubmitting}
-                          className="rounded px-2 py-0.5 text-[10px] font-medium text-[#bd9dff] transition-colors hover:bg-[#bd9dff]/10"
-                        >
-                          {isSubmitting ? 'Starting...' : 'Run'}
-                        </button>
-                      )}
-                    </div>
-                    {/* Terminal output */}
-                    <div className="h-48 overflow-auto p-3 font-mono text-xs leading-relaxed" style={{ background: '#0a0a0a', color: '#c9d1d9' }}>
-                      {!loginUrl && loginStatus !== 'awaiting_auth' ? (
-                        <p style={{ color: '#767575' }}>Click &quot;Run&quot; to start authentication...</p>
-                      ) : (
-                        <pre className="whitespace-pre-wrap break-all">{loginUrl || 'Starting claude auth login...'}</pre>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Show clickable auth link — URL extracted server-side to avoid PTY corruption */}
-                  {authUrl ? (<>
-                      <a
-                        href={authUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 block w-full rounded-[0.375rem] px-4 py-2.5 text-center text-sm font-medium text-white transition-all hover:brightness-110"
-                        style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
-                      >
-                        1. Open Authorization Page
-                      </a>
-
-                      {/* Code input — paste the code from Claude */}
-                      <div className="mt-3">
-                        <p className="mb-2 text-xs" style={{ color: '#adaaaa' }}>2. Paste the authentication code here:</p>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={authCode}
-                            onChange={(e) => setAuthCode(e.target.value)}
-                            placeholder="Paste code from Claude..."
-                            className="flex-1 rounded-[0.375rem] px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-[#767575]/50 focus:ring-1 focus:ring-[#bd9dff]"
-                            style={{ background: '#000000', border: '1px solid rgba(72,72,71,0.2)' }}
-                          />
-                          <button
-                            onClick={async () => {
-                              if (!authCode.trim()) return
-                              setIsSubmitting(true)
-                              setError(null)
-                              try {
-                                const result = await api.post<{ outputLength: number; status: string }>('/api/claude/login-pty/input', { data: authCode.trim() + '\r' })
-                                setAuthCode('')
-
-                                // Poll for auth completion (check every 2s for 30s)
-                                let attempts = 0
-                                const poll = setInterval(async () => {
-                                  attempts++
-                                  try {
-                                    // Check PTY output for success/error
-                                    const ptyRes = await api.get<{ output: string; status: string }>('/api/claude/login-pty/output')
-                                    setLoginUrl(ptyRes.output) // Update terminal display
-
-                                    // Check if CLI auth succeeded
-                                    const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
-                                    if (status.cliLoggedIn) {
-                                      clearInterval(poll)
-                                      setCliEmail(status.cliEmail)
-                                      setLoginStatus('success')
-                                      setIsSubmitting(false)
-                                    } else if (attempts >= 15) {
-                                      clearInterval(poll)
-                                      setError('Authentication timed out. Try running "claude auth login" in the Terminal tab of a project.')
-                                      setIsSubmitting(false)
-                                    }
-                                  } catch { /* ignore */ }
-                                }, 2000)
-                              } catch (err) {
-                                setError((err as Error).message)
-                                setIsSubmitting(false)
-                              }
-                            }}
-                            disabled={!authCode.trim() || isSubmitting}
-                            className="shrink-0 rounded-[0.375rem] px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-40"
-                            style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
-                          >
-                            {isSubmitting ? 'Verifying...' : 'Submit Code'}
-                          </button>
-                        </div>
-                      </div>
-                  </>) : null}
-                </>
+                <div className="mt-4">
+                  <ClaudeLoginTerminal onSuccess={() => {
+                    setLoginStatus('success')
+                    api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
+                      .then((s) => { if (s.cliLoggedIn) setCliEmail(s.cliEmail) })
+                      .catch(() => {})
+                  }} />
+                </div>
               )}
 
               <div className="mt-6 flex gap-2">
@@ -403,18 +281,12 @@ export default function SetupPage() {
                   <button
                     onClick={async () => {
                       setIsSubmitting(true)
-                      setError(null)
                       try {
                         const status = await api.get<{ cliLoggedIn: boolean; cliEmail: string | null }>('/api/claude/status')
-                        if (status.cliLoggedIn && status.cliEmail) {
-                          setCliEmail(status.cliEmail)
-                          setLoginStatus('success')
-                        } else {
-                          setError('Not authenticated yet. Click "Run" above, then open the authorization link.')
-                        }
-                      } catch (err) {
-                        setError((err as Error).message)
-                      } finally { setIsSubmitting(false) }
+                        if (status.cliLoggedIn) { setCliEmail(status.cliEmail); setLoginStatus('success') }
+                        else { setError('Not connected yet. Complete the login in the terminal above.') }
+                      } catch (err) { setError((err as Error).message) }
+                      finally { setIsSubmitting(false) }
                     }}
                     disabled={isSubmitting}
                     className="flex-1 rounded-[0.375rem] px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
@@ -423,19 +295,12 @@ export default function SetupPage() {
                     {isSubmitting ? 'Checking...' : 'Check Connection'}
                   </button>
                 )}
-
                 <button
                   onClick={async () => { await api.post('/api/setup/complete', {}).catch(() => {}); router.push('/dashboard') }}
                   className={`rounded-[0.375rem] px-4 py-2.5 text-sm font-medium transition-all ${
-                    loginStatus === 'success' || cliEmail
-                      ? 'flex-1 text-white hover:brightness-110'
-                      : 'hover:text-white'
+                    loginStatus === 'success' || cliEmail ? 'flex-1 text-white hover:brightness-110' : 'hover:text-white'
                   }`}
-                  style={
-                    loginStatus === 'success' || cliEmail
-                      ? { background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }
-                      : { color: '#adaaaa' }
-                  }
+                  style={loginStatus === 'success' || cliEmail ? { background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' } : { color: '#adaaaa' }}
                 >
                   {loginStatus === 'success' || cliEmail ? 'Continue to Dashboard' : 'Skip for now'}
                 </button>

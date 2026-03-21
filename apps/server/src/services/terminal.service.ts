@@ -20,9 +20,9 @@ interface Terminal {
 class TerminalService {
   private terminals = new Map<string, Terminal>()
 
-  create(params: { userId: string; projectId: string; projectPath: string }): string {
+  create(params: { userId: string; projectId: string; projectPath: string; command?: string; args?: string[] }): string {
     const id = crypto.randomUUID()
-    const shell = process.platform === 'darwin' ? '/bin/zsh' : (process.env.SHELL || '/bin/bash')
+    const shell = params.command || (process.platform === 'darwin' ? '/bin/zsh' : (process.env.SHELL || '/bin/bash'))
 
     const cwd = params.projectPath || config.projectsDir
     const resolvedCwd = path.resolve(cwd)
@@ -92,7 +92,7 @@ PS1="%F{cyan}[axy]%f %~ %# "
 
     log.info('Spawning restricted shell', { shell, cwd })
 
-    const term = pty.spawn(shell, [], {
+    const term = pty.spawn(shell, params.args || [], {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
