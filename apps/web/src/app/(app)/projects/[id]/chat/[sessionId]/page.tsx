@@ -2162,7 +2162,7 @@ export default function ChatSessionPage() {
               </button>
             )}
             <button
-              onClick={() => { if (confirm('Clear all messages in this session?')) { /* TODO: clear session */ } }}
+              onClick={async () => { if (confirm('Clear all messages in this session?')) { try { await api.delete(`/api/sessions/${sessionId}/messages`); await fetchMessages(sessionId) } catch (e) { console.error('Failed to clear session:', e) } } }}
               className="flex w-full items-center justify-center gap-2 rounded-[0.375rem] py-2.5 text-xs font-medium text-[#ff6e84] transition-colors hover:brightness-125"
               style={{ border: '1px solid rgba(255,110,132,0.2)' }}
             >

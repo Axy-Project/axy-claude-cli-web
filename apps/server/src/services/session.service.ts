@@ -162,6 +162,27 @@ export class SessionService {
 
     return message
   }
+  async clearMessages(sessionId: string, userId: string) {
+    const session = await this.getById(sessionId, userId)
+    if (!session) throw new Error('Session not found')
+
+    await db.delete(schema.messages).where(eq(schema.messages.sessionId, sessionId))
+    await db.delete(schema.tokenUsage).where(eq(schema.tokenUsage.sessionId, sessionId))
+
+    // Reset session token counters
+    await db
+      .update(schema.sessions)
+      .set({
+        totalInputTokens: 0,
+        totalOutputTokens: 0,
+        totalCostUsd: 0,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.sessions.id, sessionId))
+
+    return { cleared: true }
+  }
+
   async bulkDelete(ids: string[], userId: string) {
     // Validate all sessions belong to the user
     const owned = await db

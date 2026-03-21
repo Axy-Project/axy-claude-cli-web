@@ -66,6 +66,17 @@ router.delete('/:id', async (req: AuthenticatedRequest, res) => {
   }
 })
 
+/** DELETE /api/sessions/:id/messages - Clear all messages in a session */
+router.delete('/:id/messages', async (req: AuthenticatedRequest, res) => {
+  try {
+    await sessionService.clearMessages(param(req, 'id'), req.userId!)
+    res.json({ success: true, message: 'Session messages cleared' })
+  } catch (error) {
+    const status = (error as Error).message.includes('not found') ? 404 : 500
+    res.status(status).json({ success: false, error: (error as Error).message })
+  }
+})
+
 /** POST /api/sessions/bulk-delete - Delete multiple sessions at once */
 router.post('/bulk-delete', async (req: AuthenticatedRequest, res) => {
   try {
