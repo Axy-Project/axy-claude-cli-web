@@ -386,4 +386,119 @@ router.post('/:id/import-config', async (req: AuthenticatedRequest, res) => {
   }
 })
 
+/** GET /api/projects/:id/export-backup — Download full project backup as zip */
+router.get('/:id/export-backup', async (req: AuthenticatedRequest, res) => {
+  try {
+    const project = await projectService.getById(param(req, 'id'), req.userId!)
+    if (!project) {
+      res.status(404).json({ success: false, error: 'Project not found' })
+      return
+    }
+
+    const archiver = (await import('archiver')).default
+    const { db, schema } = await import('../db/index.js')
+    const { eq } = await import('drizzle-orm')
+
+    // Collect all related DB data
+    const sessions = await db.select().from(schema.sessions).where(eq(schema.sessions.projectId, project.id))
+    const sessionIds = sessions.map((s: any) => s.id)
+    let messages: any[] = []
+    if (sessionIds.length > 0) {
+      const { inArray } = await import('drizzle-orm')
+      messages = await db.select().from(schema.messages).where(inArray(schema.messages.sessionId, sessionIds))
+    }
+    const tasks = await db.select().from(schema.tasks).where(eq(schema.tasks.projectId, project.id))
+    const notes = await db.select().from(schema.notes).where(eq(schema.notes.projectId, project.id))
+    const mcpServers = await db.select().from(schema.mcpServers).where(eq(schema.mcpServers.projectId, project.id))
+
+    const manifest = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      project: { name: project.name, description: project.description, permissionMode: project.permissionMode, defaultBranch: project.defaultBranch, githubRepoUrl: project.githubRepoUrl },
+      sessions,
+      messages,
+      tasks,
+      notes,
+      mcpServers,
+    }
+
+    res.setHeader('Content-Type', 'application/zip')
+    res.setHeader('Content-Disposition', `attachment; filename="${project.name}-backup.zip"`)
+
+    const archive = archiver('zip', { zlib: { level: 6 } })
+    archive.pipe(res)
+
+    // Add manifest
+    archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' })
+
+    // Add project files
+    try {
+      const { existsSync } = await import('fs')
+      if (existsSync(project.localPath)) {
+        archive.directory(project.localPath, 'files')
+      }
+    } catch { /* no files */ }
+
+    await archive.finalize()
+  } catch (error) {
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: (error as Error).message })
+    }
+  }
+})
+
+/** POST /api/projects/import-backup — Import project from backup zip */
+router.post('/import-backup', upload.single('backup'), async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, error: 'No backup file uploaded' })
+      return
+    }
+
+    const AdmZip = (await import('adm-zip')).default
+    const zip = new AdmZip(req.file.path)
+    const manifestEntry = zip.getEntry('manifest.json')
+
+    if (!manifestEntry) {
+      res.status(400).json({ success: false, error: 'Invalid backup: missing manifest.json' })
+      return
+    }
+
+    const manifest = JSON.parse(manifestEntry.getData().toString('utf-8'))
+    const projectInfo = manifest.project
+
+    // Create new project
+    const project = await projectService.create(req.userId!, {
+      name: projectInfo.name + ' (imported)',
+      description: projectInfo.description,
+      permissionMode: projectInfo.permissionMode || 'default',
+    })
+
+    // Extract files
+    const filesEntries = zip.getEntries().filter((e: any) => e.entryName.startsWith('files/') && !e.isDirectory)
+    for (const entry of filesEntries) {
+      const relativePath = entry.entryName.replace('files/', '')
+      if (!relativePath) continue
+      const destPath = path.join(project.localPath, relativePath)
+      await fs.mkdir(path.dirname(destPath), { recursive: true })
+      await fs.writeFile(destPath, entry.getData())
+    }
+
+    // Clean up uploaded file
+    await fs.unlink(req.file.path).catch(() => {})
+
+    res.status(201).json({
+      success: true,
+      data: project,
+      meta: {
+        sessions: manifest.sessions?.length || 0,
+        messages: manifest.messages?.length || 0,
+        files: filesEntries.length,
+      },
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
 export default router

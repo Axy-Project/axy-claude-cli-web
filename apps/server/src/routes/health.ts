@@ -44,60 +44,53 @@ router.get('/version', async (_req, res) => {
   }
 })
 
-/** POST /api/health/update - Self-update: pull latest images and restart */
+/** POST /api/health/update - Self-update via Docker */
 router.post('/update', async (_req, res) => {
   try {
     const { exec } = await import('child_process')
+    const { existsSync, readFileSync } = await import('fs')
 
-    // Check if Docker socket is available
-    const { existsSync } = await import('fs')
     if (!existsSync('/var/run/docker.sock')) {
-      res.status(400).json({
-        success: false,
-        error: 'Docker socket not mounted. Add docker.sock volume to enable self-update.',
-      })
+      res.status(400).json({ success: false, error: 'Docker socket not available. Mount /var/run/docker.sock to enable self-update.' })
       return
     }
 
-    // Respond immediately — the server will restart
+    // Get container ID and compose project info
+    let containerId = ''
+    try { containerId = readFileSync('/etc/hostname', 'utf-8').trim() } catch { /* ignore */ }
+
     res.json({ success: true, message: 'Update started. Server will restart shortly.' })
 
-    // Find compose project dir and update
     setTimeout(() => {
-      // Find the compose working directory from container labels
-      const findDirCmd = `docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' $(hostname) 2>/dev/null`
-      exec(findDirCmd, { timeout: 10000 }, (err, workDir) => {
-        const dir = workDir?.trim()
-        if (!dir) {
-          console.error('[Update] Cannot find compose working directory')
-          return
+      // Strategy 1: Use compose project label
+      const inspectCmd = `docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.project.working_dir"}}' ${containerId} 2>/dev/null`
+
+      exec(inspectCmd, { timeout: 10000 }, (_err, labels) => {
+        const [projectName, workDir] = (labels?.trim() || '').split('|')
+
+        if (projectName && workDir) {
+          console.log(`[Update] Project: ${projectName}, Dir: ${workDir}`)
+
+          // Try pre-built first (docker compose pull), fallback to build from source
+          const updateCmd = `cd "${workDir}" && (docker compose pull 2>&1 && docker compose up -d 2>&1) || (git pull origin main 2>&1 && docker compose build --no-cache 2>&1 && docker compose up -d 2>&1)`
+
+          exec(updateCmd, { timeout: 600000 }, (upErr, upOut, upStderr) => {
+            if (upErr) console.error('[Update] Failed:', upErr.message, upStderr)
+            else console.log('[Update] Success:', upOut)
+          })
+        } else {
+          // Fallback: try pulling images directly
+          console.log('[Update] No compose labels found, trying direct pull')
+          const pullCmd = 'docker pull ghcr.io/axy-project/axyweb-server:latest && docker pull ghcr.io/axy-project/axyweb-web:latest'
+          exec(pullCmd, { timeout: 120000 }, (pullErr, pullOut) => {
+            if (pullErr) console.error('[Update] Pull failed:', pullErr.message)
+            else {
+              console.log('[Update] Images pulled:', pullOut)
+              // Try to restart with compose project name
+              exec(`docker restart ${containerId}`, { timeout: 30000 }, () => {})
+            }
+          })
         }
-
-        console.log('[Update] Compose dir:', dir)
-
-        // Check if using pre-built images or build-from-source
-        const checkCmd = `grep -l "^    image:" "${dir}/docker-compose.yml" "${dir}/docker-compose.prod.yml" 2>/dev/null | head -1`
-        exec(checkCmd, { timeout: 5000 }, (checkErr, composePath) => {
-          const file = composePath?.trim()
-
-          if (file) {
-            // Pre-built images: pull + recreate
-            console.log('[Update] Using pre-built images:', file)
-            const updateCmd = `cd "${dir}" && docker compose -f "${file}" pull && docker compose -f "${file}" up -d`
-            exec(updateCmd, { timeout: 300000 }, (upErr, upOut) => {
-              if (upErr) console.error('[Update] Failed:', upErr.message)
-              else console.log('[Update] Success:', upOut)
-            })
-          } else {
-            // Build from source: git pull + build + recreate
-            console.log('[Update] Build from source mode')
-            const updateCmd = `cd "${dir}" && git pull origin main 2>&1 && docker compose build --no-cache 2>&1 && docker compose up -d 2>&1`
-            exec(updateCmd, { timeout: 600000 }, (upErr, upOut) => {
-              if (upErr) console.error('[Update] Failed:', upErr.message)
-              else console.log('[Update] Success:', upOut)
-            })
-          }
-        })
       })
     }, 1000)
   } catch (error) {

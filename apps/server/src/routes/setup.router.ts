@@ -1,5 +1,7 @@
 import { Router } from 'express'
+import { eq } from 'drizzle-orm'
 import { setupService } from '../services/setup.service.js'
+import { authMiddleware, type AuthenticatedRequest } from '../middleware/auth.js'
 
 const router = Router()
 
@@ -71,6 +73,71 @@ router.post('/login', async (req, res) => {
 router.post('/complete', async (_req, res) => {
   try {
     await setupService.setSetting('setup_complete', 'true')
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+// ─── Admin endpoints (require auth) ─────────────────────
+
+/** PUT /api/setup/github-oauth — Save GitHub OAuth credentials */
+router.put('/github-oauth', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { clientId, clientSecret, requireApproval } = req.body
+    if (clientId !== undefined) await setupService.setSetting('github_client_id', clientId)
+    if (clientSecret !== undefined) {
+      const { encryptToken } = await import('../services/auth.service.js')
+      await setupService.setSetting('github_client_secret_encrypted', encryptToken(clientSecret))
+    }
+    if (requireApproval !== undefined) await setupService.setSetting('require_user_approval', requireApproval ? 'true' : 'false')
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** GET /api/setup/github-oauth — Get GitHub OAuth config (masked) */
+router.get('/github-oauth', authMiddleware, async (_req: AuthenticatedRequest, res) => {
+  try {
+    const clientId = await setupService.getSetting('github_client_id')
+    const hasSecret = !!(await setupService.getSetting('github_client_secret_encrypted'))
+    const requireApproval = (await setupService.getSetting('require_user_approval')) === 'true'
+    res.json({ success: true, data: { clientId: clientId || '', isConfigured: !!clientId && hasSecret, requireApproval } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** GET /api/setup/pending-users — List users pending approval */
+router.get('/pending-users', authMiddleware, async (_req: AuthenticatedRequest, res) => {
+  try {
+    const { db, schema } = await import('../db/index.js')
+    const pending = await db.select().from(schema.users).where(eq(schema.users.isApproved, false))
+    res.json({ success: true, data: pending.map((u: any) => ({ id: u.id, email: u.email, displayName: u.displayName, createdAt: u.createdAt })) })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** POST /api/setup/approve-user — Approve a pending user */
+router.post('/approve-user', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { userId } = req.body
+    const { db, schema } = await import('../db/index.js')
+    await db.update(schema.users).set({ isApproved: true }).where(eq(schema.users.id, userId))
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** POST /api/setup/reject-user — Reject and delete a pending user */
+router.post('/reject-user', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { userId } = req.body
+    const { db, schema } = await import('../db/index.js')
+    await db.delete(schema.users).where(eq(schema.users.id, userId))
     res.json({ success: true })
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message })
