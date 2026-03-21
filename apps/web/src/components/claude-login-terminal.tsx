@@ -97,9 +97,17 @@ export function ClaudeLoginTerminal({ onSuccess }: ClaudeLoginTerminalProps) {
 
       ;(term as any)._unsubs = unsubs
 
-      // Request login terminal creation
-      const sent = await wsClient.sendWhenReady('terminal:create-login', {})
+      // Ensure WS has the token (setup wizard may have just set it)
+      const token = localStorage.getItem('axy_token')
+      if (token && !wsClient.isConnected) {
+        wsClient.setToken(token)
+        wsClient.connect()
+      }
+
+      // Request login terminal creation (wait up to 10s for WS)
+      const sent = await wsClient.sendWhenReady('terminal:create-login', {}, 10000)
       if (!sent) {
+        term.write('\x1b[31mFailed to connect WebSocket. Try refreshing the page.\x1b[0m\r\n')
         setIsConnecting(false)
       }
     } catch (err) {
