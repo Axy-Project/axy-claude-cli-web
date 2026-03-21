@@ -22,6 +22,7 @@ class TerminalService {
 
   create(params: { userId: string; projectId: string; projectPath: string; command?: string; args?: string[] }): string {
     const id = crypto.randomUUID()
+    const isCustomCommand = !!params.command
     const shell = params.command || (process.platform === 'darwin' ? '/bin/zsh' : (process.env.SHELL || '/bin/bash'))
 
     const cwd = params.projectPath || config.projectsDir
@@ -36,6 +37,36 @@ class TerminalService {
     }
     env.TERM = 'xterm-256color'
     env.COLORTERM = 'truecolor'
+
+    // For custom commands (like claude auth login), skip shell restriction setup
+    if (isCustomCommand) {
+      log.info('Spawning custom command', { command: shell, args: params.args, cwd })
+      const term = pty.spawn(shell, params.args || [], {
+        name: 'xterm-256color',
+        cols: 120,
+        rows: 24,
+        cwd: resolvedCwd,
+        env,
+      })
+
+      const terminal: Terminal = {
+        id,
+        userId: params.userId,
+        projectId: params.projectId,
+        projectPath: resolvedCwd,
+        pty: term,
+        createdAt: new Date(),
+      }
+      this.terminals.set(id, terminal)
+      term.onData((data: string) => {
+        broadcaster.toTerminal(id, 'terminal:data', { terminalId: id, data })
+      })
+      term.onExit(({ exitCode }: { exitCode: number }) => {
+        broadcaster.toTerminal(id, 'terminal:exit', { terminalId: id, code: exitCode })
+        this.terminals.delete(id)
+      })
+      return id
+    }
 
     // Create a temporary ZDOTDIR with a .zshrc that restricts cd to project dir
     const zdotdir = path.join(os.tmpdir(), `axy-term-${id}`)
