@@ -455,6 +455,7 @@ if (config.useSqlite) {
         github_username TEXT,
         github_token_encrypted TEXT,
         is_admin BOOLEAN NOT NULL DEFAULT false,
+        is_approved BOOLEAN NOT NULL DEFAULT true,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );

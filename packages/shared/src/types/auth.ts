@@ -5,6 +5,8 @@ export interface AuthUser {
   displayName: string
   avatarUrl?: string
   githubUsername?: string
+  isAdmin?: boolean
+  isApproved?: boolean
   createdAt: string
 }
 

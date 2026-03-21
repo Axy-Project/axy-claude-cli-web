@@ -7,7 +7,7 @@ import { api } from '@/lib/api-client'
 import { TemplatePicker } from './templates'
 import type { PermissionMode } from '@axy/shared'
 
-type Tab = 'github' | 'new' | 'upload'
+type Tab = 'github' | 'new' | 'upload' | 'backup'
 
 interface GitHubRepo {
   id: number
@@ -277,6 +277,7 @@ export default function NewProjectPage() {
           { id: 'github' as Tab, label: 'Import from GitHub' },
           { id: 'new' as Tab, label: 'Empty Project' },
           { id: 'upload' as Tab, label: 'Upload Folder' },
+          { id: 'backup' as Tab, label: 'Import Backup' },
         ]).map((tab) => (
           <button
             key={tab.id}
@@ -551,6 +552,59 @@ export default function NewProjectPage() {
             onCancel={() => router.back()}
           />
         </form>
+      )}
+
+      {/* Import Backup */}
+      {activeTab === 'backup' && (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
+          <h3 className="text-lg font-semibold">Import from Backup</h3>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            Upload a .zip backup file exported from another Axy server. This will recreate the project with all files, sessions, and data.
+          </p>
+          <div className="mt-4">
+            <input
+              type="file"
+              accept=".zip"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                setIsSubmitting(true)
+                setError(null)
+                setUploadProgress('Uploading backup...')
+                try {
+                  const formData = new FormData()
+                  formData.append('backup', file)
+                  const token = localStorage.getItem('axy_token')
+                  const apiUrl = typeof window !== 'undefined'
+                    ? (window.location.port === '' || window.location.port === '80' || window.location.port === '443')
+                      ? `${window.location.protocol}//${window.location.hostname}`
+                      : `${window.location.protocol}//${window.location.hostname}:3456`
+                    : ''
+                  const res = await fetch(`${apiUrl}/api/projects/import-backup`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: formData,
+                  })
+                  const data = await res.json()
+                  if (data.success) {
+                    router.push(`/projects/${data.data.id}`)
+                  } else {
+                    setError(data.error || 'Import failed')
+                  }
+                } catch (err) {
+                  setError((err as Error).message)
+                } finally {
+                  setIsSubmitting(false)
+                  setUploadProgress(null)
+                }
+              }}
+              className="block w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-[var(--primary)] file:px-4 file:py-1 file:text-sm file:font-medium file:text-white"
+            />
+            {uploadProgress && (
+              <p className="mt-2 text-sm text-[var(--muted-foreground)]">{uploadProgress}</p>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

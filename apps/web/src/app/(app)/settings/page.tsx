@@ -507,6 +507,111 @@ export default function UserSettingsPage() {
         tokenPlaceholder="sk-ant-xxxxxxxxxxxxxxxxxxxx"
       />
 
+      {/* Admin: GitHub OAuth Config */}
+      {user?.isAdmin && <GitHubOAuthSection />}
+
+      {/* Admin: Pending Users */}
+      {user?.isAdmin && <PendingUsersSection />}
+
+    </div>
+  )
+}
+
+function GitHubOAuthSection() {
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [requireApproval, setRequireApproval] = useState(false)
+  const [isConfigured, setIsConfigured] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    api.get<{ clientId: string; isConfigured: boolean; requireApproval: boolean }>('/api/setup/github-oauth')
+      .then((d) => { setClientId(d.clientId); setIsConfigured(d.isConfigured); setRequireApproval(d.requireApproval) })
+      .catch(() => {})
+  }, [])
+
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+      <h3 className="text-sm font-semibold">GitHub OAuth (Admin)</h3>
+      <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+        Configure GitHub OAuth to enable &quot;Continue with GitHub&quot; on the login page.
+        Create an OAuth App at <a href="https://github.com/settings/developers" target="_blank" rel="noopener noreferrer" className="text-[var(--primary)] underline">github.com/settings/developers</a>.
+      </p>
+      <div className="mt-3 space-y-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium">Client ID</label>
+          <input type="text" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="GitHub OAuth Client ID"
+            className="w-full rounded-[0.375rem] border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium">Client Secret</label>
+          <input type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder={isConfigured ? '••••••• (configured)' : 'GitHub OAuth Client Secret'}
+            className="w-full rounded-[0.375rem] border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]" />
+        </div>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={requireApproval} onChange={(e) => setRequireApproval(e.target.checked)}
+            className="h-4 w-4 rounded border-[var(--border)] accent-[var(--primary)]" />
+          <div>
+            <span className="text-sm font-medium">Require admin approval for new users</span>
+            <p className="text-xs text-[var(--muted-foreground)]">New GitHub users must be approved before accessing the app.</p>
+          </div>
+        </label>
+        <button onClick={async () => {
+          setSaving(true)
+          try {
+            await api.put('/api/setup/github-oauth', { clientId, clientSecret: clientSecret || undefined, requireApproval })
+            setSaved(true); setTimeout(() => setSaved(false), 2000)
+          } catch { /* ignore */ }
+          finally { setSaving(false) }
+        }} disabled={saving}
+          className="rounded-[0.375rem] px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
+          style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}>
+          {saving ? 'Saving...' : saved ? 'Saved!' : 'Save GitHub OAuth'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function PendingUsersSection() {
+  const [users, setUsers] = useState<{ id: string; email: string; displayName: string; createdAt: string }[]>([])
+
+  useEffect(() => {
+    api.get<{ id: string; email: string; displayName: string; createdAt: string }[]>('/api/setup/pending-users')
+      .then(setUsers).catch(() => {})
+  }, [])
+
+  if (users.length === 0) return null
+
+  return (
+    <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-5">
+      <h3 className="text-sm font-semibold">Pending User Approvals ({users.length})</h3>
+      <div className="mt-3 space-y-2">
+        {users.map((u) => (
+          <div key={u.id} className="flex items-center justify-between rounded-[0.375rem] bg-[var(--background)] px-4 py-2">
+            <div>
+              <p className="text-sm font-medium">{u.displayName}</p>
+              <p className="text-xs text-[var(--muted-foreground)]">{u.email}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={async () => {
+                await api.post('/api/setup/approve-user', { userId: u.id })
+                setUsers(users.filter((x) => x.id !== u.id))
+              }} className="rounded-[0.375rem] bg-green-500/15 px-3 py-1 text-xs font-medium text-green-400 hover:bg-green-500/25">
+                Approve
+              </button>
+              <button onClick={async () => {
+                if (!confirm('Reject and delete this user?')) return
+                await api.post('/api/setup/reject-user', { userId: u.id })
+                setUsers(users.filter((x) => x.id !== u.id))
+              }} className="rounded-[0.375rem] bg-red-500/15 px-3 py-1 text-xs font-medium text-red-400 hover:bg-red-500/25">
+                Reject
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
