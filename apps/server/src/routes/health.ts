@@ -76,16 +76,20 @@ router.post('/update', async (_req, res) => {
           console.log(`[Update] Project: ${projectName}, Host dir: ${hostWorkDir}`)
 
           // Check if we can read the compose file locally (mounted volume)
-          const { existsSync } = require('fs') as typeof import('fs')
-          const useLocalFile = existsSync(localComposeFile)
-          const compose = useLocalFile
-            ? `docker compose -f "${localComposeFile}" --project-directory "${hostWorkDir}"`
-            : `docker compose -f "${hostWorkDir}/docker-compose.yml" --project-directory "${hostWorkDir}"`
-
+          const useLocalFile = fs.existsSync(localComposeFile)
           console.log(`[Update] Using ${useLocalFile ? 'local mount' : 'host path'} for compose file`)
 
+          // Build separate commands for pull/build (uses local file) and up (uses host path)
+          // -p forces consistent project name so images match between build and up
+          const composeBuild = useLocalFile
+            ? `docker compose -p "${projectName}" -f "${localComposeFile}" --env-file "/opt/axy-src/.env" --project-directory /opt/axy-src`
+            : `docker compose -p "${projectName}" -f "${hostWorkDir}/docker-compose.yml" --env-file "${hostWorkDir}/.env" --project-directory "${hostWorkDir}"`
+          const composeUp = useLocalFile
+            ? `docker compose -p "${projectName}" -f "${localComposeFile}" --env-file "/opt/axy-src/.env" --project-directory "${hostWorkDir}"`
+            : `docker compose -p "${projectName}" -f "${hostWorkDir}/docker-compose.yml" --env-file "${hostWorkDir}/.env" --project-directory "${hostWorkDir}"`
+
           // Try pre-built first (pull), fallback to build from source
-          const updateCmd = `(${compose} pull 2>&1 && ${compose} up -d 2>&1) || (${compose} up -d --build 2>&1)`
+          const updateCmd = `(${composeBuild} pull 2>&1 && ${composeUp} up -d 2>&1) || (${composeBuild} up -d --build 2>&1)`
 
           exec(updateCmd, { timeout: 600000 }, (upErr, upOut, upStderr) => {
             if (upErr) console.error('[Update] Failed:', upErr.message, upStderr)
