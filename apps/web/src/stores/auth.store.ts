@@ -8,6 +8,7 @@ interface AuthState {
   token: string | null
   isLoading: boolean
   isAuthenticated: boolean
+  isPendingApproval: boolean
 
   login: (provider?: 'github') => Promise<string>
   devLogin: () => Promise<void>
@@ -22,6 +23,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   isLoading: true,
   isAuthenticated: false,
+  isPendingApproval: false,
 
   login: async () => {
     const data = await api.post<{ url: string }>('/api/auth/login', {
@@ -43,6 +45,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem('axy_token', data.token)
     api.setToken(data.token)
     wsClient.setToken(data.token)
+
+    // Check if user is approved
+    if (data.user.isApproved === false) {
+      set({ user: data.user, token: data.token, isAuthenticated: false, isPendingApproval: true, isLoading: false })
+      return
+    }
     set({ user: data.user, token: data.token, isAuthenticated: true, isLoading: false })
   },
 
@@ -56,8 +64,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loadUser: async () => {
     try {
       const user = await api.get<AuthUser>('/api/auth/me')
+      if (user.isApproved === false) {
+        set({ user, isAuthenticated: false, isPendingApproval: true, isLoading: false })
+        return
+      }
       set({ user, isAuthenticated: true, isLoading: false })
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      if (msg.includes('pending approval')) {
+        set({ isAuthenticated: false, isPendingApproval: true, isLoading: false })
+        return
+      }
       get().logout()
       set({ isLoading: false })
     }

@@ -20,7 +20,7 @@ interface UpdateInfo {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const { isAuthenticated, isLoading } = useAuthStore()
+  const { isAuthenticated, isLoading, isPendingApproval, user, logout } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
@@ -44,10 +44,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useKeyboardShortcuts(shortcuts)
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated && !isPendingApproval) {
       router.replace('/login')
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [isAuthenticated, isLoading, isPendingApproval, router])
+
+  // Show pending approval screen
+  if (isPendingApproval) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4" style={{ background: '#0e0e0e' }}>
+        <div className="w-full max-w-md rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-8 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-500/10">
+            <svg className="h-8 w-8 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Pending Approval</h2>
+          <p className="mt-2 text-sm text-[#adaaaa]">
+            Your account {user?.displayName ? `(${user.displayName})` : ''} is waiting for admin approval. You&apos;ll get access once an administrator approves your request.
+          </p>
+          <button
+            onClick={() => { logout(); router.replace('/login') }}
+            className="mt-6 rounded-lg border border-[#484847]/30 px-4 py-2 text-sm text-[#adaaaa] transition-colors hover:text-white"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // Track WS reconnection state
   useEffect(() => {

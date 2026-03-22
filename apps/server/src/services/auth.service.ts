@@ -188,6 +188,10 @@ export class AuthService {
           .returning()
         user = updated
       } else {
+        // Check if admin requires approval for new users
+        const { setupService } = await import('./setup.service.js')
+        const requireApproval = (await setupService.getSetting('require_user_approval')) === 'true'
+
         const [created] = await db
           .insert(schema.users)
           .values({
@@ -196,6 +200,7 @@ export class AuthService {
             displayName: githubUser.name || githubUser.login,
             avatarUrl: githubUser.avatar_url,
             githubUsername: githubUser.login,
+            isApproved: !requireApproval,
           })
           .returning()
         user = created

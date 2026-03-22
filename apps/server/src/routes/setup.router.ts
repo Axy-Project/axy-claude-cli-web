@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { eq } from 'drizzle-orm'
 import { setupService } from '../services/setup.service.js'
 import { authMiddleware, type AuthenticatedRequest } from '../middleware/auth.js'
+import { param } from '../middleware/params.js'
 
 const router = Router()
 
@@ -114,7 +115,10 @@ router.get('/pending-users', authMiddleware, async (_req: AuthenticatedRequest, 
   try {
     const { db, schema } = await import('../db/index.js')
     const pending = await db.select().from(schema.users).where(eq(schema.users.isApproved, false))
-    res.json({ success: true, data: pending.map((u: any) => ({ id: u.id, email: u.email, displayName: u.displayName, createdAt: u.createdAt })) })
+    res.json({ success: true, data: pending.map((u: any) => ({
+      id: u.id, email: u.email, displayName: u.displayName,
+      avatarUrl: u.avatarUrl, githubUsername: u.githubUsername, createdAt: u.createdAt,
+    })) })
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message })
   }
@@ -138,6 +142,40 @@ router.post('/reject-user', authMiddleware, async (req: AuthenticatedRequest, re
     const { userId } = req.body
     const { db, schema } = await import('../db/index.js')
     await db.delete(schema.users).where(eq(schema.users.id, userId))
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** GET /api/setup/users — List all users (admin only) */
+router.get('/users', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { db, schema } = await import('../db/index.js')
+    const allUsers = await db.select().from(schema.users)
+    res.json({ success: true, data: allUsers.map((u: any) => ({
+      id: u.id, email: u.email, displayName: u.displayName,
+      avatarUrl: u.avatarUrl, githubUsername: u.githubUsername,
+      isAdmin: u.isAdmin, isApproved: u.isApproved, createdAt: u.createdAt,
+    })) })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** PATCH /api/setup/users/:id — Update user role/approval (admin only) */
+router.patch('/users/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { isAdmin, isApproved } = req.body
+    const { db, schema } = await import('../db/index.js')
+    const updates: Record<string, unknown> = {}
+    if (isAdmin !== undefined) updates.isAdmin = isAdmin
+    if (isApproved !== undefined) updates.isApproved = isApproved
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ success: false, error: 'No fields to update' })
+      return
+    }
+    await db.update(schema.users).set(updates).where(eq(schema.users.id, param(req, 'id')))
     res.json({ success: true })
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message })

@@ -574,11 +574,16 @@ function GitHubOAuthSection() {
   )
 }
 
+interface PendingUser {
+  id: string; email: string; displayName: string
+  avatarUrl?: string; githubUsername?: string; createdAt: string
+}
+
 function PendingUsersSection() {
-  const [users, setUsers] = useState<{ id: string; email: string; displayName: string; createdAt: string }[]>([])
+  const [users, setUsers] = useState<PendingUser[]>([])
 
   useEffect(() => {
-    api.get<{ id: string; email: string; displayName: string; createdAt: string }[]>('/api/setup/pending-users')
+    api.get<PendingUser[]>('/api/setup/pending-users')
       .then(setUsers).catch(() => {})
   }, [])
 
@@ -590,9 +595,19 @@ function PendingUsersSection() {
       <div className="mt-3 space-y-2">
         {users.map((u) => (
           <div key={u.id} className="flex items-center justify-between rounded-[0.375rem] bg-[var(--background)] px-4 py-2">
-            <div>
-              <p className="text-sm font-medium">{u.displayName}</p>
-              <p className="text-xs text-[var(--muted-foreground)]">{u.email}</p>
+            <div className="flex items-center gap-3">
+              {u.avatarUrl ? (
+                <img src={u.avatarUrl} alt="" className="h-8 w-8 rounded-full" />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--muted)] text-xs font-bold">{u.displayName[0]}</div>
+              )}
+              <div>
+                <p className="text-sm font-medium">{u.displayName}</p>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  {u.githubUsername && <span className="mr-2">@{u.githubUsername}</span>}
+                  {u.email}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={async () => {
