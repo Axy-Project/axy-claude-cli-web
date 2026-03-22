@@ -164,9 +164,47 @@ router.put('/:id', async (req: AuthenticatedRequest, res) => {
   }
 })
 
-/** DELETE /api/projects/:id */
+/** POST /api/projects/:id/move — Move project to/from organization */
+router.post('/:id/move', async (req: AuthenticatedRequest, res) => {
+  try {
+    const { orgId } = req.body as { orgId: string | null }
+    // If moving to an org, verify user is a member
+    if (orgId) {
+      const { orgService } = await import('../services/org.service.js')
+      const role = await orgService.checkMembership(orgId, req.userId!)
+      if (!role) {
+        res.status(403).json({ success: false, error: 'You are not a member of this organization' })
+        return
+      }
+    }
+    const project = await projectService.moveToOrg(param(req, 'id'), req.userId!, orgId)
+    if (!project) {
+      res.status(404).json({ success: false, error: 'Project not found' })
+      return
+    }
+    res.json({ success: true, data: project })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** DELETE /api/projects/:id — Requires password confirmation */
 router.delete('/:id', async (req: AuthenticatedRequest, res) => {
   try {
+    const { password } = req.body as { password?: string }
+    if (!password) {
+      res.status(400).json({ success: false, error: 'Password is required to delete a project' })
+      return
+    }
+
+    // Verify password matches the user's account
+    const { setupService } = await import('../services/setup.service.js')
+    const loginResult = await setupService.verifyPassword(req.userId!, password)
+    if (!loginResult) {
+      res.status(403).json({ success: false, error: 'Incorrect password' })
+      return
+    }
+
     const deleted = await projectService.delete(param(req, 'id'), req.userId!)
     if (!deleted) {
       res.status(404).json({ success: false, error: 'Project not found' })

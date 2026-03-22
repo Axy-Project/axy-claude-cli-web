@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useProjectStore } from '@/stores/project.store'
 import { useAccountStore } from '@/stores/account.store'
 import { api } from '@/lib/api-client'
-import type { PermissionMode } from '@axy/shared'
+import type { PermissionMode, Organization } from '@axy/shared'
 
 export default function ProjectSettingsPage() {
   const params = useParams()
@@ -17,11 +17,19 @@ export default function ProjectSettingsPage() {
   const importFileRef = useRef<HTMLInputElement>(null)
   const { accounts, fetchAccounts } = useAccountStore()
 
+  const moveProject = useProjectStore((s) => s.moveProject)
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [importResult, setImportResult] = useState<string | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [orgs, setOrgs] = useState<Organization[]>([])
+  const [isMoving, setIsMoving] = useState(false)
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -35,6 +43,7 @@ export default function ProjectSettingsPage() {
 
   useEffect(() => {
     fetchAccounts()
+    api.get<Organization[]>('/api/orgs').then(setOrgs).catch(() => {})
   }, [fetchAccounts])
 
   useEffect(() => {
@@ -78,11 +87,28 @@ export default function ProjectSettingsPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-      return
+    if (!deletePassword) { setDeleteError('Enter your password'); return }
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteProject(projectId, deletePassword)
+      router.push('/projects')
+    } catch (err) {
+      setDeleteError((err as Error).message || 'Failed to delete')
+    } finally {
+      setIsDeleting(false)
     }
-    await deleteProject(projectId)
-    router.push('/projects')
+  }
+
+  const handleMove = async (orgId: string | null) => {
+    setIsMoving(true)
+    try {
+      await moveProject(projectId, orgId)
+    } catch (err) {
+      console.error('Move failed:', err)
+    } finally {
+      setIsMoving(false)
+    }
   }
 
   const handleExportConfig = useCallback(async () => {
@@ -368,18 +394,77 @@ export default function ProjectSettingsPage() {
         </div>
       </div>
 
+      {/* Move to Organization */}
+      {orgs.length > 0 && (
+        <div className="rounded-lg border border-[var(--border)] p-4">
+          <h3 className="font-medium">Organization</h3>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            Move this project to an organization or back to personal.
+          </p>
+          <div className="mt-3 flex items-center gap-2">
+            <select
+              value={project?.orgId || ''}
+              onChange={(e) => handleMove(e.target.value || null)}
+              disabled={isMoving}
+              className="flex-1 rounded-lg border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-sm outline-none disabled:opacity-50"
+            >
+              <option value="">Personal</option>
+              {orgs.map((org) => (
+                <option key={org.id} value={org.id}>{org.name}</option>
+              ))}
+            </select>
+            {isMoving && <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />}
+          </div>
+        </div>
+      )}
+
       {/* Danger zone */}
       <div className="rounded-lg border border-[var(--destructive)] p-4">
         <h3 className="font-medium text-[var(--destructive)]">Danger Zone</h3>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          Permanently delete this project and all its data.
+          Permanently delete this project and all its data. Only the project creator can delete it.
         </p>
-        <button
-          onClick={handleDelete}
-          className="mt-3 rounded-lg border border-[var(--destructive)] px-4 py-2 text-sm font-medium text-[var(--destructive)] transition-colors hover:bg-[var(--destructive)] hover:text-white"
-        >
-          Delete Project
-        </button>
+        {!showDeleteDialog ? (
+          <button
+            onClick={() => setShowDeleteDialog(true)}
+            className="mt-3 rounded-lg border border-[var(--destructive)] px-4 py-2 text-sm font-medium text-[var(--destructive)] transition-colors hover:bg-[var(--destructive)] hover:text-white"
+          >
+            Delete Project
+          </button>
+        ) : (
+          <div className="mt-3 space-y-3 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-3">
+            <p className="text-sm font-medium text-[var(--destructive)]">
+              Enter your password to confirm deletion of &quot;{project?.name}&quot;
+            </p>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="Your password"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleDelete()}
+              className="w-full rounded-lg border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--destructive)]"
+            />
+            {deleteError && (
+              <p className="text-xs text-[var(--destructive)]">{deleteError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting || !deletePassword}
+                className="rounded-lg bg-[var(--destructive)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+              <button
+                onClick={() => { setShowDeleteDialog(false); setDeletePassword(''); setDeleteError(null) }}
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--accent)]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

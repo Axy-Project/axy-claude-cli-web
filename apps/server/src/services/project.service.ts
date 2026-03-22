@@ -132,6 +132,21 @@ export class ProjectService {
       ))
     return true
   }
+  async moveToOrg(projectId: string, userId: string, orgId: string | null) {
+    // Verify ownership
+    const project = await this.getById(projectId, userId)
+    if (!project) return null
+
+    const [updated] = await db
+      .update(schema.projects)
+      .set({ orgId, updatedAt: new Date() })
+      .where(and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.userId, userId)
+      ))
+      .returning()
+    return updated || null
+  }
 }
 
 export const projectService = new ProjectService()

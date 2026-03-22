@@ -104,6 +104,17 @@ export class SetupService {
     return { token, user: { id: user.id, email: user.email, displayName: user.displayName, isAdmin: true } }
   }
 
+  /** Verify a user's password by userId */
+  async verifyPassword(userId: string, password: string): Promise<boolean> {
+    const [user] = await db
+      .select({ passwordHash: schema.users.passwordHash })
+      .from(schema.users)
+      .where(eq(schema.users.id, userId))
+      .limit(1)
+    if (!user?.passwordHash) return false
+    return verifyPassword(password, user.passwordHash)
+  }
+
   /** Login with email/password */
   async loginLocal(email: string, password: string): Promise<{ token: string; user: any } | null> {
     const { generateToken } = await import('../middleware/auth.js')

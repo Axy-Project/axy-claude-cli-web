@@ -13,7 +13,8 @@ interface ProjectState {
   importProject: (input: ImportProjectInput) => Promise<Project>
   uploadProject: (data: { name: string; description?: string; permissionMode?: string; orgId?: string; files: File[]; onProgress?: (msg: string) => void }) => Promise<Project>
   updateProject: (id: string, data: Partial<CreateProjectInput>) => Promise<void>
-  deleteProject: (id: string) => Promise<void>
+  deleteProject: (id: string, password?: string) => Promise<void>
+  moveProject: (id: string, orgId: string | null) => Promise<void>
 }
 
 export const useProjectStore = create<ProjectState>((set) => ({
@@ -122,11 +123,19 @@ export const useProjectStore = create<ProjectState>((set) => ({
     }))
   },
 
-  deleteProject: async (id) => {
-    await api.delete(`/api/projects/${id}`)
+  deleteProject: async (id, password?: string) => {
+    await api.delete(`/api/projects/${id}`, password ? { password } : undefined)
     set((state) => ({
       projects: state.projects.filter(p => p.id !== id),
       currentProject: state.currentProject?.id === id ? null : state.currentProject,
+    }))
+  },
+
+  moveProject: async (id, orgId) => {
+    const project = await api.post<Project>(`/api/projects/${id}/move`, { orgId })
+    set((state) => ({
+      projects: state.projects.map(p => p.id === id ? project : p),
+      currentProject: state.currentProject?.id === id ? project : state.currentProject,
     }))
   },
 }))

@@ -132,8 +132,11 @@ class ApiClient {
     return this.extractData(res)
   }
 
-  async delete(path: string): Promise<void> {
-    await this.request(path, { method: 'DELETE' })
+  async delete(path: string, body?: Record<string, unknown>): Promise<void> {
+    await this.request(path, {
+      method: 'DELETE',
+      ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
+    })
   }
 }
 
