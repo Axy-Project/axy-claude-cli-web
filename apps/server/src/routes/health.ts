@@ -75,36 +75,37 @@ router.post('/update', async (_req, res) => {
         if (projectName && hostWorkDir) {
           console.log(`[Update] Project: ${projectName}, Host dir: ${hostWorkDir}`)
 
-          // Check if we can read the compose file locally (mounted volume)
-          const useLocalFile = fs.existsSync(localComposeFile)
-          console.log(`[Update] Using ${useLocalFile ? 'local mount' : 'host path'} for compose file`)
+          // Use a sidecar container to run the update — the server container will be
+          // killed during "up -d" so it can't supervise its own recreation.
+          // The sidecar runs detached (-d) and survives the server's death.
+          const composeFile = `${hostWorkDir}/docker-compose.yml`
+          const envFile = `${hostWorkDir}/.env`
 
-          // Build separate commands for pull/build (uses local file) and up (uses host path)
-          // -p forces consistent project name so images match between build and up
-          const composeBuild = useLocalFile
-            ? `docker compose -p "${projectName}" -f "${localComposeFile}" --env-file "/opt/axy-src/.env" --project-directory /opt/axy-src`
-            : `docker compose -p "${projectName}" -f "${hostWorkDir}/docker-compose.yml" --env-file "${hostWorkDir}/.env" --project-directory "${hostWorkDir}"`
-          const composeUp = useLocalFile
-            ? `docker compose -p "${projectName}" -f "${localComposeFile}" --env-file "/opt/axy-src/.env" --project-directory "${hostWorkDir}"`
-            : `docker compose -p "${projectName}" -f "${hostWorkDir}/docker-compose.yml" --env-file "${hostWorkDir}/.env" --project-directory "${hostWorkDir}"`
+          // Try pull first, then up -d via sidecar
+          const sidecarScript = [
+            `docker compose -p "${projectName}" -f "${composeFile}" --env-file "${envFile}" --project-directory "${hostWorkDir}" pull 2>&1`,
+            `docker compose -p "${projectName}" -f "${composeFile}" --env-file "${envFile}" --project-directory "${hostWorkDir}" up -d 2>&1`,
+          ].join(' && ')
 
-          // Try pre-built first (pull), fallback to build from source
-          const updateCmd = `(${composeBuild} pull 2>&1 && ${composeUp} up -d 2>&1) || (${composeBuild} up -d --build 2>&1)`
+          // Launch a lightweight Alpine container with docker CLI to run the update
+          const updateCmd = `docker run --rm -d ` +
+            `-v /var/run/docker.sock:/var/run/docker.sock ` +
+            `-v "${hostWorkDir}:${hostWorkDir}:ro" ` +
+            `docker:cli sh -c '${sidecarScript}'`
 
-          exec(updateCmd, { timeout: 600000 }, (upErr, upOut, upStderr) => {
-            if (upErr) console.error('[Update] Failed:', upErr.message, upStderr)
-            else console.log('[Update] Success:', upOut)
+          console.log('[Update] Launching sidecar update container')
+          exec(updateCmd, { timeout: 30000 }, (upErr, upOut, upStderr) => {
+            if (upErr) console.error('[Update] Sidecar launch failed:', upErr.message, upStderr)
+            else console.log('[Update] Sidecar launched:', upOut.trim())
           })
         } else {
-          // Fallback: try pulling images directly
-          console.log('[Update] No compose labels found, trying direct pull')
-          const pullCmd = 'docker pull ghcr.io/axy-project/axyweb-server:latest && docker pull ghcr.io/axy-project/axyweb-web:latest'
-          exec(pullCmd, { timeout: 120000 }, (pullErr, pullOut) => {
-            if (pullErr) console.error('[Update] Pull failed:', pullErr.message)
-            else {
-              console.log('[Update] Images pulled:', pullOut)
-              exec(`docker restart ${containerId}`, { timeout: 30000 }, () => {})
-            }
+          // Fallback: pull images via sidecar then restart
+          console.log('[Update] No compose labels found, trying direct pull via sidecar')
+          const pullScript = 'docker pull ghcr.io/axy-project/axyweb-server:latest && docker pull ghcr.io/axy-project/axyweb-web:latest'
+          const pullCmd = `docker run --rm -d -v /var/run/docker.sock:/var/run/docker.sock docker:cli sh -c '${pullScript} && docker restart ${containerId}'`
+          exec(pullCmd, { timeout: 30000 }, (pullErr, pullOut) => {
+            if (pullErr) console.error('[Update] Sidecar pull failed:', pullErr.message)
+            else console.log('[Update] Sidecar pull launched:', pullOut.trim())
           })
         }
       })
