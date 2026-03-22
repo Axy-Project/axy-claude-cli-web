@@ -74,12 +74,18 @@ COPY --from=deps /app/node_modules ./node_modules
 # Server-specific node_modules (native modules like node-pty, better-sqlite3)
 COPY --from=deps /app/apps/server/node_modules ./apps/server/node_modules
 
-# Create data directory for projects
-RUN mkdir -p /data/projects
+# Create non-root user (Claude CLI blocks --dangerously-skip-permissions as root)
+RUN addgroup -S axy && adduser -S axy -G axy
+
+# Create data directory with correct ownership
+RUN mkdir -p /data/projects && chown -R axy:axy /data/projects /app
 
 WORKDIR /app/apps/server
 
 ENV NODE_ENV=production
+
+# Switch to non-root user
+USER axy
 
 EXPOSE 3456
 
