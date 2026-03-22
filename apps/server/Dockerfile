@@ -76,20 +76,22 @@ COPY --from=deps /app/apps/server/node_modules ./apps/server/node_modules
 
 # Create non-root user (Claude CLI blocks --dangerously-skip-permissions as root)
 RUN addgroup -S axy && adduser -S axy -G axy
+RUN apk add --no-cache su-exec
 
 # Create data directory with correct ownership
-RUN mkdir -p /data/projects && chown -R axy:axy /data/projects /app
+RUN mkdir -p /data/projects && chown -R axy:axy /data /app
 
 WORKDIR /app/apps/server
 
 ENV NODE_ENV=production
 
-# Switch to non-root user
-USER axy
+# Entrypoint fixes permissions for existing volumes, then runs as non-root
+COPY apps/server/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 3456
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD wget -q --spider http://localhost:3456/api/health || exit 1
 
-CMD ["node", "dist/index.js"]
+ENTRYPOINT ["/entrypoint.sh"]

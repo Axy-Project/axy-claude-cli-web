@@ -66,17 +66,26 @@ router.post('/update', async (_req, res) => {
       const inspectCmd = `docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.project.working_dir"}}' ${containerId} 2>/dev/null`
 
       exec(inspectCmd, { timeout: 10000 }, (_err, labels) => {
-        const [projectName, workDir] = (labels?.trim() || '').split('|')
+        const [projectName, hostWorkDir] = (labels?.trim() || '').split('|')
 
-        if (projectName && workDir) {
-          console.log(`[Update] Project: ${projectName}, Dir: ${workDir}`)
+        // The compose file is mounted at /opt/axy-src inside the container (read-only)
+        // but docker compose -f needs the HOST path (daemon resolves it on the host)
+        const localComposeFile = '/opt/axy-src/docker-compose.yml'
 
-          // Use -f and --project-directory flags so docker CLI talks to the host daemon
-          // which has access to host paths (the container itself doesn't have workDir)
-          const compose = `docker compose -f "${workDir}/docker-compose.yml" --project-directory "${workDir}"`
+        if (projectName && hostWorkDir) {
+          console.log(`[Update] Project: ${projectName}, Host dir: ${hostWorkDir}`)
 
-          // Try pre-built first (pull), fallback to build from source (git pull + build)
-          const updateCmd = `(${compose} pull 2>&1 && ${compose} up -d 2>&1) || (cd "${workDir}" && git pull origin main 2>&1 && ${compose} up -d --build 2>&1)`
+          // Check if we can read the compose file locally (mounted volume)
+          const { existsSync } = require('fs') as typeof import('fs')
+          const useLocalFile = existsSync(localComposeFile)
+          const compose = useLocalFile
+            ? `docker compose -f "${localComposeFile}" --project-directory "${hostWorkDir}"`
+            : `docker compose -f "${hostWorkDir}/docker-compose.yml" --project-directory "${hostWorkDir}"`
+
+          console.log(`[Update] Using ${useLocalFile ? 'local mount' : 'host path'} for compose file`)
+
+          // Try pre-built first (pull), fallback to build from source
+          const updateCmd = `(${compose} pull 2>&1 && ${compose} up -d 2>&1) || (${compose} up -d --build 2>&1)`
 
           exec(updateCmd, { timeout: 600000 }, (upErr, upOut, upStderr) => {
             if (upErr) console.error('[Update] Failed:', upErr.message, upStderr)

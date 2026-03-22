@@ -15,8 +15,8 @@ import { projectMemberService } from '../services/project-member.service.js'
 const router = Router()
 router.use(authMiddleware)
 
-// Ensure temp upload directory exists
-const UPLOAD_TMP = path.join(config.projectsDir, '..', '.tmp-uploads')
+// Ensure temp upload directory exists (inside projectsDir so it has correct permissions)
+const UPLOAD_TMP = path.join(config.projectsDir, '.tmp-uploads')
 mkdirSync(UPLOAD_TMP, { recursive: true })
 
 // Multer for file uploads - store in temp inside data dir (same filesystem to avoid cross-device issues)

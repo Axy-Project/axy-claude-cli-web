@@ -10,23 +10,38 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [authMethod, setAuthMethod] = useState<string | null>(null)
+  const [serverUnavailable, setServerUnavailable] = useState(false)
   const [localForm, setLocalForm] = useState({ email: '', password: '' })
   const login = useAuthStore((s) => s.login)
 
-  // Check setup status on load — redirect to setup if not complete
+  // Check setup status on load — retry if server is restarting
   useEffect(() => {
-    api.get<{ setupComplete: boolean; authMethod: string }>('/api/setup/status')
-      .then((data) => {
-        if (!data.setupComplete) {
-          router.replace('/setup')
-          return
-        }
-        setAuthMethod(data.authMethod || 'local')
-      })
-      .catch(() => {
-        // API failed — probably first launch, go to setup
-        router.replace('/setup')
-      })
+    let attempt = 0
+    const maxRetries = 5
+    const retryDelay = 3000
+
+    const checkStatus = () => {
+      api.get<{ setupComplete: boolean; authMethod: string }>('/api/setup/status')
+        .then((data) => {
+          setServerUnavailable(false)
+          if (!data.setupComplete) {
+            router.replace('/setup')
+            return
+          }
+          setAuthMethod(data.authMethod || 'local')
+        })
+        .catch(() => {
+          attempt++
+          if (attempt < maxRetries) {
+            setServerUnavailable(true)
+            setTimeout(checkStatus, retryDelay)
+          } else {
+            // After all retries failed, assume first launch
+            router.replace('/setup')
+          }
+        })
+    }
+    checkStatus()
   }, [router])
 
   const handleGitHubLogin = async () => {
@@ -67,8 +82,11 @@ export default function LoginPage() {
 
   if (authMethod === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center" style={{ background: '#0e0e0e' }}>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3" style={{ background: '#0e0e0e' }}>
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#bd9dff] border-t-transparent" />
+        {serverUnavailable && (
+          <p className="text-sm text-[#adaaaa]">Server is starting up, retrying...</p>
+        )}
       </div>
     )
   }
