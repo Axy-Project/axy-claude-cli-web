@@ -62,7 +62,7 @@ router.post('/update', async (_req, res) => {
     res.json({ success: true, message: 'Update started. Server will restart shortly.' })
 
     setTimeout(() => {
-      // Strategy 1: Use compose project label
+      // Get compose project info from container labels
       const inspectCmd = `docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.project.working_dir"}}' ${containerId} 2>/dev/null`
 
       exec(inspectCmd, { timeout: 10000 }, (_err, labels) => {
@@ -71,8 +71,12 @@ router.post('/update', async (_req, res) => {
         if (projectName && workDir) {
           console.log(`[Update] Project: ${projectName}, Dir: ${workDir}`)
 
-          // Try pre-built first (docker compose pull), fallback to build from source
-          const updateCmd = `cd "${workDir}" && (docker compose pull 2>&1 && docker compose up -d 2>&1) || (git pull origin main 2>&1 && docker compose build --no-cache 2>&1 && docker compose up -d 2>&1)`
+          // Use -f and --project-directory flags so docker CLI talks to the host daemon
+          // which has access to host paths (the container itself doesn't have workDir)
+          const compose = `docker compose -f "${workDir}/docker-compose.yml" --project-directory "${workDir}"`
+
+          // Try pre-built first (pull), fallback to build from source (git pull + build)
+          const updateCmd = `(${compose} pull 2>&1 && ${compose} up -d 2>&1) || (cd "${workDir}" && git pull origin main 2>&1 && ${compose} up -d --build 2>&1)`
 
           exec(updateCmd, { timeout: 600000 }, (upErr, upOut, upStderr) => {
             if (upErr) console.error('[Update] Failed:', upErr.message, upStderr)
@@ -86,7 +90,6 @@ router.post('/update', async (_req, res) => {
             if (pullErr) console.error('[Update] Pull failed:', pullErr.message)
             else {
               console.log('[Update] Images pulled:', pullOut)
-              // Try to restart with compose project name
               exec(`docker restart ${containerId}`, { timeout: 30000 }, () => {})
             }
           })
