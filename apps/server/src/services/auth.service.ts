@@ -29,17 +29,40 @@ export function decryptToken(ciphertext: string): string {
   return decipher.update(encrypted) + decipher.final('utf8')
 }
 
+// ─── Resolve GitHub OAuth credentials (env → DB fallback) ────
+async function getGitHubCredentials(): Promise<{ clientId: string; clientSecret: string }> {
+  let clientId = config.githubClientId
+  let clientSecret = config.githubClientSecret
+
+  // Fallback: read from systemSettings (configured via admin Settings UI)
+  if (!clientId) {
+    try {
+      const [row] = await db.select().from(schema.systemSettings).where(eq(schema.systemSettings.key, 'github_client_id')).limit(1)
+      clientId = row?.value || ''
+    } catch { /* table may not exist yet */ }
+  }
+  if (!clientSecret) {
+    try {
+      const [row] = await db.select().from(schema.systemSettings).where(eq(schema.systemSettings.key, 'github_client_secret_encrypted')).limit(1)
+      if (row?.value) clientSecret = decryptToken(row.value)
+    } catch { /* table may not exist yet */ }
+  }
+
+  return { clientId, clientSecret }
+}
+
 export class AuthService {
   /**
-   * Get GitHub OAuth authorization URL (direct, no Supabase).
-   * Requires GITHUB_CLIENT_ID in env.
+   * Get GitHub OAuth authorization URL.
+   * Reads credentials from env vars OR from DB (admin Settings UI).
    */
-  getGitHubOAuthUrl(redirectUrl: string): string {
-    if (!config.githubClientId) {
-      throw new Error('GITHUB_CLIENT_ID not configured. Set it in your .env file.')
+  async getGitHubOAuthUrl(redirectUrl: string): Promise<string> {
+    const { clientId } = await getGitHubCredentials()
+    if (!clientId) {
+      throw new Error('GitHub OAuth not configured. Set Client ID in Settings or GITHUB_CLIENT_ID in .env.')
     }
     const params = new URLSearchParams({
-      client_id: config.githubClientId,
+      client_id: clientId,
       redirect_uri: redirectUrl,
       scope: 'repo read:user user:email',
       state: randomBytes(16).toString('hex'),
@@ -49,11 +72,11 @@ export class AuthService {
 
   /**
    * Exchange GitHub OAuth code for access token, upsert user in DB.
-   * Direct GitHub OAuth - no Supabase needed.
    */
   async handleGitHubCallback(code: string): Promise<{ token: string; user: any }> {
-    if (!config.githubClientId || !config.githubClientSecret) {
-      throw new Error('GitHub OAuth not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.')
+    const { clientId, clientSecret } = await getGitHubCredentials()
+    if (!clientId || !clientSecret) {
+      throw new Error('GitHub OAuth not configured. Set Client ID and Secret in Settings or .env.')
     }
 
     // Exchange code for access token
@@ -64,8 +87,8 @@ export class AuthService {
         Accept: 'application/json',
       },
       body: JSON.stringify({
-        client_id: config.githubClientId,
-        client_secret: config.githubClientSecret,
+        client_id: clientId,
+        client_secret: clientSecret,
         code,
       }),
     })

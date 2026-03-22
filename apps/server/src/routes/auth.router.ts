@@ -9,7 +9,7 @@ const router = Router()
 router.post('/login', authLimiter, async (req, res) => {
   try {
     const { redirectUrl } = req.body
-    const url = authService.getGitHubOAuthUrl(
+    const url = await authService.getGitHubOAuthUrl(
       redirectUrl || `${req.headers.origin}/callback`
     )
     res.json({ success: true, data: { url } })
