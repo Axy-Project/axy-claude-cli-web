@@ -37,13 +37,17 @@ export default function OrgMembersPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
-    const userId = userIdInput.trim()
-    if (!userId) return
+    const input = userIdInput.trim()
+    if (!input) return
 
     setIsInviting(true)
     setInviteError(null)
     try {
-      await addMember(orgId, { userId, role: inviteRole })
+      // Detect if input is email or github username
+      const body = input.includes('@')
+        ? { email: input, role: inviteRole }
+        : { githubUsername: input.replace(/^@/, ''), role: inviteRole }
+      await addMember(orgId, body)
       setUserIdInput('')
       setInviteRole('member')
     } catch (err) {
@@ -132,7 +136,7 @@ export default function OrgMembersPage() {
               setUserIdInput(e.target.value)
               setInviteError(null)
             }}
-            placeholder="User ID or email"
+            placeholder="Email or @github username"
             className="flex-1 rounded-lg border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]"
             required
           />
@@ -217,14 +221,19 @@ export default function OrgMembersPage() {
                   <tr key={member.id} className="bg-[var(--card)] transition-colors hover:bg-[var(--accent)]">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--secondary)] text-sm font-medium">
-                          {member.user?.displayName?.charAt(0).toUpperCase() || '?'}
-                        </div>
+                        {member.user?.avatarUrl ? (
+                          <img src={member.user.avatarUrl} alt="" className="h-9 w-9 rounded-full" />
+                        ) : (
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--secondary)] text-sm font-medium">
+                            {member.user?.displayName?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
                         <div>
                           <p className="text-sm font-medium">
                             {member.user?.displayName || 'Unknown User'}
                           </p>
                           <p className="text-xs text-[var(--muted-foreground)]">
+                            {(member.user as any)?.githubUsername && <span className="mr-2">@{(member.user as any).githubUsername}</span>}
                             {member.user?.email || member.userId}
                           </p>
                         </div>

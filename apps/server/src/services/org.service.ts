@@ -68,6 +68,7 @@ export class OrgService {
           email: schema.users.email,
           displayName: schema.users.displayName,
           avatarUrl: schema.users.avatarUrl,
+          githubUsername: schema.users.githubUsername,
         },
       })
       .from(schema.orgMembers)

@@ -70,7 +70,7 @@ router.get('/:id/members', async (req: AuthenticatedRequest, res) => {
   }
 })
 
-/** POST /api/orgs/:id/members */
+/** POST /api/orgs/:id/members — Add by email, @github username, or userId */
 router.post('/:id/members', async (req: AuthenticatedRequest, res) => {
   try {
     const role = await orgService.checkMembership(param(req, 'id'), req.userId!)
@@ -78,11 +78,37 @@ router.post('/:id/members', async (req: AuthenticatedRequest, res) => {
       res.status(403).json({ success: false, error: 'Insufficient permissions' })
       return
     }
-    const { userId, role: memberRole } = req.body
-    const member = await orgService.addMember(param(req, 'id'), userId, memberRole)
+    const { userId, email, githubUsername, role: memberRole } = req.body
+
+    // Resolve user by email or GitHub username if userId not provided
+    let resolvedUserId = userId
+    if (!resolvedUserId && (email || githubUsername)) {
+      const { db, schema } = await import('../db/index.js')
+      const { eq } = await import('drizzle-orm')
+      const [user] = email
+        ? await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)).limit(1)
+        : await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.githubUsername, githubUsername)).limit(1)
+      if (!user) {
+        res.status(404).json({ success: false, error: `User not found: ${email || githubUsername}` })
+        return
+      }
+      resolvedUserId = user.id
+    }
+
+    if (!resolvedUserId) {
+      res.status(400).json({ success: false, error: 'Provide email, githubUsername, or userId' })
+      return
+    }
+
+    const member = await orgService.addMember(param(req, 'id'), resolvedUserId, memberRole)
     res.status(201).json({ success: true, data: member })
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message })
+    const msg = (error as Error).message
+    if (msg.includes('UNIQUE') || msg.includes('unique')) {
+      res.status(409).json({ success: false, error: 'User is already a member' })
+      return
+    }
+    res.status(500).json({ success: false, error: msg })
   }
 })
 

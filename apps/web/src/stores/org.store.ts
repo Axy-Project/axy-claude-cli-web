@@ -15,7 +15,7 @@ interface OrgState {
   updateOrg: (id: string, data: { name?: string; slug?: string }) => Promise<void>
   deleteOrg: (id: string) => Promise<void>
   fetchMembers: (orgId: string) => Promise<void>
-  addMember: (orgId: string, data: { userId: string; role: OrgRole }) => Promise<void>
+  addMember: (orgId: string, data: { userId?: string; email?: string; githubUsername?: string; role: OrgRole }) => Promise<void>
   removeMember: (orgId: string, userId: string) => Promise<void>
 }
 
