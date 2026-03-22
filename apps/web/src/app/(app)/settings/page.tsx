@@ -513,6 +513,9 @@ export default function UserSettingsPage() {
       {/* Admin: Pending Users */}
       {user?.isAdmin && <PendingUsersSection />}
 
+      {/* Admin: All Users Management */}
+      {user?.isAdmin && <UserManagementSection />}
+
     </div>
   )
 }
@@ -623,6 +626,66 @@ function PendingUsersSection() {
               }} className="rounded-[0.375rem] bg-red-500/15 px-3 py-1 text-xs font-medium text-red-400 hover:bg-red-500/25">
                 Reject
               </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+interface ManagedUser {
+  id: string; email: string; displayName: string
+  avatarUrl?: string; githubUsername?: string
+  isAdmin: boolean; isApproved: boolean; createdAt: string
+}
+
+function UserManagementSection() {
+  const [users, setUsers] = useState<ManagedUser[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get<ManagedUser[]>('/api/setup/users')
+      .then(setUsers).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  const handleToggle = async (userId: string, field: 'isAdmin' | 'isApproved', value: boolean) => {
+    await api.patch(`/api/setup/users/${userId}`, { [field]: value })
+    setUsers(users.map((u) => u.id === userId ? { ...u, [field]: value } : u))
+  }
+
+  if (loading) return null
+
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5">
+      <h3 className="text-sm font-semibold">User Management ({users.length})</h3>
+      <p className="mt-1 text-xs text-[var(--muted-foreground)]">All registered users. Toggle admin or access.</p>
+      <div className="mt-3 space-y-2">
+        {users.map((u) => (
+          <div key={u.id} className="flex items-center justify-between rounded-[0.375rem] bg-[var(--background)] px-4 py-2.5">
+            <div className="flex items-center gap-3">
+              {u.avatarUrl ? (
+                <img src={u.avatarUrl} alt="" className="h-8 w-8 rounded-full" />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--muted)] text-xs font-bold">{u.displayName?.[0] || '?'}</div>
+              )}
+              <div>
+                <p className="text-sm font-medium">{u.displayName}</p>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  {u.githubUsername && <span className="mr-2">@{u.githubUsername}</span>}
+                  {u.email}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+                <input type="checkbox" checked={u.isApproved} onChange={(e) => handleToggle(u.id, 'isApproved', e.target.checked)} className="h-3.5 w-3.5 rounded" />
+                Approved
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+                <input type="checkbox" checked={u.isAdmin} onChange={(e) => handleToggle(u.id, 'isAdmin', e.target.checked)} className="h-3.5 w-3.5 rounded" />
+                Admin
+              </label>
             </div>
           </div>
         ))}
