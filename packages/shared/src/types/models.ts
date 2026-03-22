@@ -1,4 +1,4 @@
-import type { PermissionMode, ChatMode, AgentRole, OrgRole, OrgPlan } from '../constants'
+import type { PermissionMode, ChatMode, AgentRole, OrgRole, OrgPlan, ProjectRole } from '../constants'
 
 // ─── Users ───────────────────────────────────────────────
 export interface User {
@@ -56,6 +56,20 @@ export interface OrgMember {
   orgId: string
   userId: string
   role: OrgRole
+  joinedAt: string
+  user?: User
+}
+
+export interface ProjectMember {
+  id: string
+  projectId: string
+  userId: string
+  role: ProjectRole
+  canChat: boolean
+  canEditFiles: boolean
+  canManageGit: boolean
+  canViewSettings: boolean
+  canEditSettings: boolean
   joinedAt: string
   user?: User
 }

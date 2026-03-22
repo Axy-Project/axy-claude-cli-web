@@ -23,3 +23,6 @@ export type OrgRole = (typeof ORG_ROLES)[number]
 
 export const ORG_PLANS = ['free', 'pro', 'enterprise'] as const
 export type OrgPlan = (typeof ORG_PLANS)[number]
+
+export const PROJECT_ROLES = ['owner', 'editor', 'viewer'] as const
+export type ProjectRole = (typeof PROJECT_ROLES)[number]

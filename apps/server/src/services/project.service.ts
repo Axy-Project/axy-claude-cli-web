@@ -6,12 +6,14 @@ import simpleGit from 'simple-git'
 import { db, schema } from '../db/index.js'
 import { config } from '../config.js'
 import type { CreateProjectInput, ProjectFilters } from '@axy/shared'
+import { projectMemberService } from './project-member.service.js'
 
 export class ProjectService {
   async list(userId: string, filters: ProjectFilters = {}) {
     const { page = 1, pageSize = 20, orgId, isArchived, search } = filters
 
-    let query = db
+    // Get projects the user owns
+    const owned = await db
       .select()
       .from(schema.projects)
       .where(
@@ -29,19 +31,45 @@ export class ProjectService {
       .limit(pageSize)
       .offset((page - 1) * pageSize)
 
-    return query
+    // Get projects where user is a member (not owner)
+    const memberships = await db.select({ projectId: schema.projectMembers.projectId })
+      .from(schema.projectMembers)
+      .where(eq(schema.projectMembers.userId, userId))
+
+    const memberProjectIds = memberships.map((m: { projectId: string }) => m.projectId).filter((id: string) => !owned.some((p: { id: string }) => p.id === id))
+
+    let shared: typeof owned = []
+    if (memberProjectIds.length > 0) {
+      shared = await db.select().from(schema.projects)
+        .where(and(
+          inArray(schema.projects.id, memberProjectIds),
+          isArchived !== undefined ? eq(schema.projects.isArchived, isArchived) : eq(schema.projects.isArchived, false),
+        ))
+        .orderBy(desc(schema.projects.updatedAt))
+    }
+
+    return [...owned, ...shared]
   }
 
+  /** Get project by ID — owner OR member with access */
   async getById(projectId: string, userId: string) {
+    // First try direct ownership
     const [project] = await db
       .select()
       .from(schema.projects)
-      .where(and(
-        eq(schema.projects.id, projectId),
-        eq(schema.projects.userId, userId)
-      ))
+      .where(eq(schema.projects.id, projectId))
       .limit(1)
-    return project || null
+
+    if (!project) return null
+
+    // Owner always has access
+    if (project.userId === userId) return project
+
+    // Check member access
+    const access = await projectMemberService.getAccess(projectId, userId)
+    if (access) return project
+
+    return null
   }
 
   async create(userId: string, input: CreateProjectInput) {

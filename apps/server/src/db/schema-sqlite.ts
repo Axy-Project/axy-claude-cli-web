@@ -174,6 +174,20 @@ export const agentTemplates = sqliteTable('agent_templates', {
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
 })
 
+// ─── Project Members ────────────────────────────────────
+export const projectMembers = sqliteTable('project_members', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text('project_id').references(() => projects.id).notNull(),
+  userId: text('user_id').references(() => users.id).notNull(),
+  role: text('role').notNull().default('viewer'), // owner, editor, viewer
+  canChat: integer('can_chat', { mode: 'boolean' }).notNull().default(true),
+  canEditFiles: integer('can_edit_files', { mode: 'boolean' }).notNull().default(false),
+  canManageGit: integer('can_manage_git', { mode: 'boolean' }).notNull().default(false),
+  canViewSettings: integer('can_view_settings', { mode: 'boolean' }).notNull().default(false),
+  canEditSettings: integer('can_edit_settings', { mode: 'boolean' }).notNull().default(false),
+  joinedAt: integer('joined_at', { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
+})
+
 // ─── Permission Rules ────────────────────────────────────
 export const permissionRules = sqliteTable('permission_rules', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),

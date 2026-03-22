@@ -10,6 +10,7 @@ import { agentService } from '../services/agent.service.js'
 import { skillService } from '../services/skill.service.js'
 import { mcpService } from '../services/mcp.service.js'
 import { config } from '../config.js'
+import { projectMemberService } from '../services/project-member.service.js'
 
 const router = Router()
 router.use(authMiddleware)
@@ -423,6 +424,72 @@ router.post('/:id/import-config', async (req: AuthenticatedRequest, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message })
   }
+})
+
+/** GET /api/projects/:id/members — List project members */
+router.get('/:id/members', async (req: AuthenticatedRequest, res) => {
+  try {
+    const project = await projectService.getById(param(req, 'id'), req.userId!)
+    if (!project) { res.status(404).json({ success: false, error: 'Project not found' }); return }
+    const members = await projectMemberService.listMembers(project.id)
+    // Also include the owner
+    const { db, schema } = await import('../db/index.js')
+    const { eq } = await import('drizzle-orm')
+    const [owner] = await db.select().from(schema.users).where(eq(schema.users.id, project.userId)).limit(1)
+    res.json({ success: true, data: { owner: owner ? { id: owner.id, email: owner.email, displayName: owner.displayName, avatarUrl: owner.avatarUrl, githubUsername: owner.githubUsername } : null, members } })
+  } catch (error) { res.status(500).json({ success: false, error: (error as Error).message }) }
+})
+
+/** POST /api/projects/:id/members — Add a member (by email or GitHub username) */
+router.post('/:id/members', async (req: AuthenticatedRequest, res) => {
+  try {
+    const project = await projectService.getById(param(req, 'id'), req.userId!)
+    if (!project || project.userId !== req.userId) { res.status(403).json({ success: false, error: 'Only the project owner can manage members' }); return }
+    const { email, githubUsername, role, canChat, canEditFiles, canManageGit, canViewSettings, canEditSettings } = req.body
+    // Find user by email or GitHub username
+    const { db, schema } = await import('../db/index.js')
+    const { eq } = await import('drizzle-orm')
+    let [user] = email
+      ? await db.select().from(schema.users).where(eq(schema.users.email, email)).limit(1)
+      : await db.select().from(schema.users).where(eq(schema.users.githubUsername, githubUsername)).limit(1)
+    if (!user) { res.status(404).json({ success: false, error: `User not found: ${email || githubUsername}` }); return }
+    if (user.id === req.userId) { res.status(400).json({ success: false, error: 'Cannot add yourself as a member' }); return }
+    const member = await projectMemberService.addMember(project.id, user.id, role || 'viewer', { canChat, canEditFiles, canManageGit, canViewSettings, canEditSettings })
+    res.status(201).json({ success: true, data: member })
+  } catch (error) {
+    const msg = (error as Error).message
+    if (msg.includes('UNIQUE') || msg.includes('unique')) { res.status(409).json({ success: false, error: 'User is already a member' }); return }
+    res.status(500).json({ success: false, error: msg })
+  }
+})
+
+/** PATCH /api/projects/:id/members/:userId — Update member permissions */
+router.patch('/:id/members/:userId', async (req: AuthenticatedRequest, res) => {
+  try {
+    const project = await projectService.getById(param(req, 'id'), req.userId!)
+    if (!project || project.userId !== req.userId) { res.status(403).json({ success: false, error: 'Only the project owner can manage members' }); return }
+    const updated = await projectMemberService.updateMember(project.id, param(req, 'userId'), req.body)
+    if (!updated) { res.status(404).json({ success: false, error: 'Member not found' }); return }
+    res.json({ success: true, data: updated })
+  } catch (error) { res.status(500).json({ success: false, error: (error as Error).message }) }
+})
+
+/** DELETE /api/projects/:id/members/:userId — Remove a member */
+router.delete('/:id/members/:userId', async (req: AuthenticatedRequest, res) => {
+  try {
+    const project = await projectService.getById(param(req, 'id'), req.userId!)
+    if (!project || project.userId !== req.userId) { res.status(403).json({ success: false, error: 'Only the project owner can manage members' }); return }
+    await projectMemberService.removeMember(project.id, param(req, 'userId'))
+    res.json({ success: true })
+  } catch (error) { res.status(500).json({ success: false, error: (error as Error).message }) }
+})
+
+/** GET /api/projects/:id/my-access — Get current user's access level */
+router.get('/:id/my-access', async (req: AuthenticatedRequest, res) => {
+  try {
+    const access = await projectMemberService.getAccess(param(req, 'id'), req.userId!)
+    res.json({ success: true, data: access || { role: null } })
+  } catch (error) { res.status(500).json({ success: false, error: (error as Error).message }) }
 })
 
 /** GET /api/projects/:id/export-backup — Download full project backup as zip */

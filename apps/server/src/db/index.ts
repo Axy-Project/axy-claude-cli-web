@@ -164,6 +164,20 @@ if (config.useSqlite) {
       created_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS project_members (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id),
+      user_id TEXT NOT NULL REFERENCES users(id),
+      role TEXT NOT NULL DEFAULT 'viewer',
+      can_chat INTEGER NOT NULL DEFAULT 1,
+      can_edit_files INTEGER NOT NULL DEFAULT 0,
+      can_manage_git INTEGER NOT NULL DEFAULT 0,
+      can_view_settings INTEGER NOT NULL DEFAULT 0,
+      can_edit_settings INTEGER NOT NULL DEFAULT 0,
+      joined_at INTEGER NOT NULL,
+      UNIQUE(project_id, user_id)
+    );
+
     CREATE TABLE IF NOT EXISTS permission_rules (
       id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL REFERENCES projects(id),
@@ -596,6 +610,19 @@ if (config.useSqlite) {
         is_official BOOLEAN NOT NULL DEFAULT false,
         download_count INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS project_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        project_id UUID NOT NULL REFERENCES projects(id),
+        user_id UUID NOT NULL REFERENCES users(id),
+        role TEXT NOT NULL DEFAULT 'viewer',
+        can_chat BOOLEAN NOT NULL DEFAULT true,
+        can_edit_files BOOLEAN NOT NULL DEFAULT false,
+        can_manage_git BOOLEAN NOT NULL DEFAULT false,
+        can_view_settings BOOLEAN NOT NULL DEFAULT false,
+        can_edit_settings BOOLEAN NOT NULL DEFAULT false,
+        joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(project_id, user_id)
       );
       CREATE TABLE IF NOT EXISTS permission_rules (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

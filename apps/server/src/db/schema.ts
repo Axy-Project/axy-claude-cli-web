@@ -176,6 +176,20 @@ export const agentTemplates = pgTable('agent_templates', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
+// ─── Project Members ────────────────────────────────────
+export const projectMembers = pgTable('project_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  role: text('role').notNull().default('viewer'),
+  canChat: boolean('can_chat').notNull().default(true),
+  canEditFiles: boolean('can_edit_files').notNull().default(false),
+  canManageGit: boolean('can_manage_git').notNull().default(false),
+  canViewSettings: boolean('can_view_settings').notNull().default(false),
+  canEditSettings: boolean('can_edit_settings').notNull().default(false),
+  joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
 // ─── Permission Rules ────────────────────────────────────
 export const permissionRules = pgTable('permission_rules', {
   id: uuid('id').primaryKey().defaultRandom(),

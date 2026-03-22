@@ -4,8 +4,9 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useProjectStore } from '@/stores/project.store'
 import { useAccountStore } from '@/stores/account.store'
+import { useAuthStore } from '@/stores/auth.store'
 import { api } from '@/lib/api-client'
-import type { PermissionMode, Organization } from '@axy/shared'
+import type { PermissionMode, Organization, ProjectRole } from '@axy/shared'
 
 export default function ProjectSettingsPage() {
   const params = useParams()
@@ -394,6 +395,9 @@ export default function ProjectSettingsPage() {
         </div>
       </div>
 
+      {/* Project Members */}
+      <ProjectMembersSection projectId={projectId} isOwner={project?.userId === useAuthStore.getState().user?.id} />
+
       {/* Move to Organization */}
       {orgs.length > 0 && (
         <div className="rounded-lg border border-[var(--border)] p-4">
@@ -466,6 +470,129 @@ export default function ProjectSettingsPage() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+interface MemberData {
+  id: string; userId: string; role: string
+  canChat: boolean; canEditFiles: boolean; canManageGit: boolean
+  canViewSettings: boolean; canEditSettings: boolean
+  user: { id: string; email: string; displayName: string; avatarUrl?: string; githubUsername?: string }
+}
+
+function ProjectMembersSection({ projectId, isOwner }: { projectId: string; isOwner: boolean }) {
+  const [members, setMembers] = useState<MemberData[]>([])
+  const [owner, setOwner] = useState<{ id: string; displayName: string; avatarUrl?: string; githubUsername?: string } | null>(null)
+  const [addEmail, setAddEmail] = useState('')
+  const [addRole, setAddRole] = useState<ProjectRole>('viewer')
+  const [isAdding, setIsAdding] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(() => {
+    api.get<{ owner: typeof owner; members: MemberData[] }>(`/api/projects/${projectId}/members`)
+      .then((d) => { setOwner(d.owner); setMembers(d.members) }).catch(() => {})
+  }, [projectId])
+
+  useEffect(() => { load() }, [load])
+
+  const handleAdd = async () => {
+    if (!addEmail.trim()) return
+    setIsAdding(true); setError(null)
+    try {
+      const field = addEmail.includes('@') ? 'email' : 'githubUsername'
+      await api.post(`/api/projects/${projectId}/members`, { [field]: addEmail.trim(), role: addRole })
+      setAddEmail('')
+      load()
+    } catch (err) { setError((err as Error).message) }
+    finally { setIsAdding(false) }
+  }
+
+  const handleUpdate = async (userId: string, data: Record<string, unknown>) => {
+    await api.patch(`/api/projects/${projectId}/members/${userId}`, data)
+    load()
+  }
+
+  const handleRemove = async (userId: string) => {
+    if (!confirm('Remove this member?')) return
+    await api.delete(`/api/projects/${projectId}/members/${userId}`)
+    load()
+  }
+
+  return (
+    <div className="rounded-lg border border-[var(--border)] p-4">
+      <h3 className="font-medium">Project Members</h3>
+      <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+        Manage who has access to this project and what they can do.
+      </p>
+
+      {/* Owner */}
+      {owner && (
+        <div className="mt-3 flex items-center gap-3 rounded-lg bg-[var(--accent)]/50 px-3 py-2">
+          {owner.avatarUrl ? <img src={owner.avatarUrl} alt="" className="h-7 w-7 rounded-full" /> : <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--primary)]/20 text-xs font-bold">{owner.displayName[0]}</div>}
+          <div className="flex-1">
+            <span className="text-sm font-medium">{owner.displayName}</span>
+            {owner.githubUsername && <span className="ml-2 text-xs text-[var(--muted-foreground)]">@{owner.githubUsername}</span>}
+          </div>
+          <span className="rounded-full bg-[var(--primary)]/15 px-2 py-0.5 text-[10px] font-bold text-[var(--primary)]">OWNER</span>
+        </div>
+      )}
+
+      {/* Members list */}
+      {members.map((m) => (
+        <div key={m.id} className="mt-2 rounded-lg border border-[var(--border)] px-3 py-2">
+          <div className="flex items-center gap-3">
+            {m.user.avatarUrl ? <img src={m.user.avatarUrl} alt="" className="h-7 w-7 rounded-full" /> : <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--muted)] text-xs font-bold">{m.user.displayName[0]}</div>}
+            <div className="flex-1">
+              <span className="text-sm font-medium">{m.user.displayName}</span>
+              {m.user.githubUsername && <span className="ml-2 text-xs text-[var(--muted-foreground)]">@{m.user.githubUsername}</span>}
+            </div>
+            {isOwner && (
+              <>
+                <select value={m.role} onChange={(e) => handleUpdate(m.userId, { role: e.target.value })} className="rounded border border-[var(--input)] bg-[var(--background)] px-2 py-1 text-xs">
+                  <option value="editor">Editor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+                <button onClick={() => handleRemove(m.userId)} className="text-xs text-[var(--destructive)] hover:underline">Remove</button>
+              </>
+            )}
+          </div>
+          {isOwner && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(['canChat', 'canEditFiles', 'canManageGit', 'canViewSettings', 'canEditSettings'] as const).map((perm) => (
+                <label key={perm} className="flex items-center gap-1 text-[11px] text-[var(--muted-foreground)]">
+                  <input type="checkbox" checked={m[perm]} onChange={(e) => handleUpdate(m.userId, { [perm]: e.target.checked })} className="h-3 w-3 rounded" />
+                  {perm.replace('can', '').replace(/([A-Z])/g, ' $1').trim()}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Add member */}
+      {isOwner && (
+        <div className="mt-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={addEmail}
+              onChange={(e) => setAddEmail(e.target.value)}
+              placeholder="Email or @github username"
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+              className="flex-1 rounded-lg border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
+            />
+            <select value={addRole} onChange={(e) => setAddRole(e.target.value as ProjectRole)} className="rounded-lg border border-[var(--input)] bg-[var(--background)] px-2 py-2 text-sm">
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
+            </select>
+            <button onClick={handleAdd} disabled={isAdding || !addEmail.trim()} className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+              {isAdding ? '...' : 'Add'}
+            </button>
+          </div>
+          {error && <p className="mt-1 text-xs text-[var(--destructive)]">{error}</p>}
+        </div>
+      )}
     </div>
   )
 }
