@@ -40,7 +40,6 @@ services:
     volumes:
       - projects:/data/projects
       - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/bin/docker:/usr/bin/docker:ro
     ports:
       - "${SERVER_PORT:-3456}:3456"
 

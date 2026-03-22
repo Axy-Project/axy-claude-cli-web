@@ -46,8 +46,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
     volumes:
       - projects:/data/projects
-      - /var/run/docker.sock:/var/run/docker.sock # Needed for self-update
-      - /usr/bin/docker:/usr/bin/docker:ro         # Docker CLI binary
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "${SERVER_PORT:-3456}:3456"
     labels:

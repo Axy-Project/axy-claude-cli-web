@@ -19,9 +19,10 @@ const UPLOAD_TMP = path.join(config.projectsDir, '..', '.tmp-uploads')
 mkdirSync(UPLOAD_TMP, { recursive: true })
 
 // Multer for file uploads - store in temp inside data dir (same filesystem to avoid cross-device issues)
+const MAX_UPLOAD_SIZE = parseInt(process.env.MAX_UPLOAD_SIZE_MB || '500', 10) * 1024 * 1024
 const upload = multer({
   dest: UPLOAD_TMP,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB per file
+  limits: { fileSize: MAX_UPLOAD_SIZE },
 })
 
 /** GET /api/projects */
