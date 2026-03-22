@@ -62,6 +62,10 @@ export default function NewProjectPage() {
   const [uploadProgress, setUploadProgress] = useState<string | null>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
 
+  // Backup import state
+  const [backupProgress, setBackupProgress] = useState<number>(0)
+  const [backupStatus, setBackupStatus] = useState<string | null>(null)
+
   // Load GitHub repos on mount
   useEffect(() => {
     loadRepos()
@@ -559,49 +563,90 @@ export default function NewProjectPage() {
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
           <h3 className="text-lg font-semibold">Import from Backup</h3>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            Upload a .zip backup file exported from another Axy server. This will recreate the project with all files, sessions, and data.
+            Upload a .zip backup file exported from another Axy instance. Restores files, chat sessions, messages, tasks, notes, pipelines, and all project data.
           </p>
           <div className="mt-4">
             <input
               type="file"
               accept=".zip"
+              disabled={isSubmitting}
               onChange={async (e) => {
                 const file = e.target.files?.[0]
                 if (!file) return
                 setIsSubmitting(true)
                 setError(null)
-                setUploadProgress('Uploading backup...')
-                try {
-                  const formData = new FormData()
-                  formData.append('backup', file)
-                  const token = localStorage.getItem('axy_token')
-                  const apiUrl = typeof window !== 'undefined'
-                    ? (window.location.port === '' || window.location.port === '80' || window.location.port === '443')
-                      ? `${window.location.protocol}//${window.location.hostname}`
-                      : `${window.location.protocol}//${window.location.hostname}:3456`
-                    : ''
-                  const res = await fetch(`${apiUrl}/api/projects/import-backup`, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${token}` },
-                    body: formData,
-                  })
-                  const data = await res.json()
-                  if (data.success) {
-                    router.push(`/projects/${data.data.id}`)
-                  } else {
-                    setError(data.error || 'Import failed')
+                setBackupProgress(0)
+                setBackupStatus(`Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)...`)
+
+                const formData = new FormData()
+                formData.append('backup', file)
+                const token = localStorage.getItem('axy_token')
+                const apiUrl = typeof window !== 'undefined'
+                  ? (window.location.port === '' || window.location.port === '80' || window.location.port === '443')
+                    ? `${window.location.protocol}//${window.location.hostname}`
+                    : `${window.location.protocol}//${window.location.hostname}:3456`
+                  : ''
+
+                const xhr = new XMLHttpRequest()
+                xhr.open('POST', `${apiUrl}/api/projects/import-backup`)
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+
+                xhr.upload.onprogress = (ev) => {
+                  if (ev.lengthComputable) {
+                    const pct = Math.round((ev.loaded / ev.total) * 100)
+                    setBackupProgress(pct)
+                    if (pct < 100) {
+                      setBackupStatus(`Uploading... ${pct}% (${(ev.loaded / 1024 / 1024).toFixed(1)} / ${(ev.total / 1024 / 1024).toFixed(1)} MB)`)
+                    } else {
+                      setBackupStatus('Processing backup — restoring data...')
+                    }
                   }
-                } catch (err) {
-                  setError((err as Error).message)
-                } finally {
-                  setIsSubmitting(false)
-                  setUploadProgress(null)
                 }
+
+                xhr.onload = () => {
+                  try {
+                    const data = JSON.parse(xhr.responseText)
+                    if (data.success) {
+                      const m = data.meta || {}
+                      setBackupStatus(`Imported! ${m.sessions || 0} sessions, ${m.messages || 0} messages, ${m.tasks || 0} tasks, ${m.files || 0} files`)
+                      setBackupProgress(100)
+                      setTimeout(() => router.push(`/projects/${data.data.id}`), 1000)
+                    } else {
+                      setError(data.error || 'Import failed')
+                      setBackupStatus(null)
+                      setIsSubmitting(false)
+                    }
+                  } catch {
+                    setError('Invalid server response')
+                    setBackupStatus(null)
+                    setIsSubmitting(false)
+                  }
+                }
+
+                xhr.onerror = () => {
+                  setError('Upload failed — check your connection')
+                  setBackupStatus(null)
+                  setIsSubmitting(false)
+                }
+
+                xhr.send(formData)
               }}
-              className="block w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-[var(--primary)] file:px-4 file:py-1 file:text-sm file:font-medium file:text-white"
+              className="block w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-[var(--primary)] file:px-4 file:py-1 file:text-sm file:font-medium file:text-white disabled:opacity-50"
             />
-            {uploadProgress && (
-              <p className="mt-2 text-sm text-[var(--muted-foreground)]">{uploadProgress}</p>
+
+            {backupStatus && (
+              <div className="mt-3 space-y-2">
+                <div className="h-2 overflow-hidden rounded-full bg-[var(--border)]">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${backupProgress}%`,
+                      background: backupProgress === 100 ? '#22c55e' : 'var(--primary)',
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-[var(--muted-foreground)]">{backupStatus}</p>
+              </div>
             )}
           </div>
         </div>

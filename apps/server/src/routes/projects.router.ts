@@ -401,26 +401,41 @@ router.get('/:id/export-backup', async (req: AuthenticatedRequest, res) => {
     const { eq } = await import('drizzle-orm')
 
     // Collect all related DB data
+    const { inArray } = await import('drizzle-orm')
     const sessions = await db.select().from(schema.sessions).where(eq(schema.sessions.projectId, project.id))
     const sessionIds = sessions.map((s: any) => s.id)
     let messages: any[] = []
+    let tokenUsage: any[] = []
     if (sessionIds.length > 0) {
-      const { inArray } = await import('drizzle-orm')
       messages = await db.select().from(schema.messages).where(inArray(schema.messages.sessionId, sessionIds))
+      tokenUsage = await db.select().from(schema.tokenUsage).where(inArray(schema.tokenUsage.sessionId, sessionIds))
     }
     const tasks = await db.select().from(schema.tasks).where(eq(schema.tasks.projectId, project.id))
     const notes = await db.select().from(schema.notes).where(eq(schema.notes.projectId, project.id))
     const mcpServers = await db.select().from(schema.mcpServers).where(eq(schema.mcpServers.projectId, project.id))
+    const permissionRules = await db.select().from(schema.permissionRules).where(eq(schema.permissionRules.projectId, project.id))
+    const webhooks = await db.select().from(schema.webhooks).where(eq(schema.webhooks.projectId, project.id))
+    const pipelines = await db.select().from(schema.deployPipelines).where(eq(schema.deployPipelines.projectId, project.id))
+    const pipelineIds = pipelines.map((p: any) => p.id)
+    let deployRuns: any[] = []
+    if (pipelineIds.length > 0) {
+      deployRuns = await db.select().from(schema.deployRuns).where(inArray(schema.deployRuns.pipelineId, pipelineIds))
+    }
 
     const manifest = {
-      version: '1.0',
+      version: '2.0',
       exportedAt: new Date().toISOString(),
       project: { name: project.name, description: project.description, permissionMode: project.permissionMode, defaultBranch: project.defaultBranch, githubRepoUrl: project.githubRepoUrl },
       sessions,
       messages,
+      tokenUsage,
       tasks,
       notes,
       mcpServers,
+      permissionRules,
+      webhooks,
+      pipelines,
+      deployRuns,
     }
 
     res.setHeader('Content-Type', 'application/zip')
@@ -467,6 +482,7 @@ router.post('/import-backup', upload.single('backup'), async (req: Authenticated
 
     const manifest = JSON.parse(manifestEntry.getData().toString('utf-8'))
     const projectInfo = manifest.project
+    const { db, schema } = await import('../db/index.js')
 
     // Create new project
     const project = await projectService.create(req.userId!, {
@@ -475,7 +491,133 @@ router.post('/import-backup', upload.single('backup'), async (req: Authenticated
       permissionMode: projectInfo.permissionMode || 'default',
     })
 
-    // Extract files
+    const newProjectId = project.id
+    const userId = req.userId!
+
+    // Map old IDs → new IDs for FK references
+    const sessionIdMap = new Map<string, string>()
+    const pipelineIdMap = new Map<string, string>()
+
+    // ─── Restore sessions ───
+    if (manifest.sessions?.length) {
+      for (const s of manifest.sessions) {
+        const newId = crypto.randomUUID()
+        sessionIdMap.set(s.id, newId)
+        await db.insert(schema.sessions).values({
+          id: newId, projectId: newProjectId, userId,
+          title: s.title, model: s.model, mode: s.mode,
+          cliSessionId: s.cliSessionId,
+          totalInputTokens: s.totalInputTokens || 0,
+          totalOutputTokens: s.totalOutputTokens || 0,
+          totalCostUsd: s.totalCostUsd || 0,
+        })
+      }
+    }
+
+    // ─── Restore messages ───
+    if (manifest.messages?.length) {
+      for (const m of manifest.messages) {
+        const sessionId = sessionIdMap.get(m.sessionId)
+        if (!sessionId) continue
+        await db.insert(schema.messages).values({
+          sessionId, role: m.role, contentJson: m.contentJson,
+          model: m.model, inputTokens: m.inputTokens, outputTokens: m.outputTokens,
+          costUsd: m.costUsd, durationMs: m.durationMs,
+          toolCallsJson: m.toolCallsJson, thinkingJson: m.thinkingJson,
+        })
+      }
+    }
+
+    // ─── Restore tasks ───
+    if (manifest.tasks?.length) {
+      for (const t of manifest.tasks) {
+        await db.insert(schema.tasks).values({
+          projectId: newProjectId, userId,
+          title: t.title, description: t.description, status: t.status,
+          priority: t.priority, effort: t.effort,
+        })
+      }
+    }
+
+    // ─── Restore notes ───
+    if (manifest.notes?.length) {
+      for (const n of manifest.notes) {
+        await db.insert(schema.notes).values({
+          userId, projectId: newProjectId,
+          title: n.title, content: n.content, color: n.color,
+          isPinned: n.isPinned, tags: n.tags,
+        })
+      }
+    }
+
+    // ─── Restore MCP servers ───
+    if (manifest.mcpServers?.length) {
+      for (const m of manifest.mcpServers) {
+        await db.insert(schema.mcpServers).values({
+          projectId: newProjectId, name: m.name, type: m.type,
+          command: m.command, argsJson: m.argsJson, envJson: m.envJson,
+          isEnabled: m.isEnabled,
+        })
+      }
+    }
+
+    // ─── Restore permission rules ───
+    if (manifest.permissionRules?.length) {
+      for (const r of manifest.permissionRules) {
+        await db.insert(schema.permissionRules).values({
+          projectId: newProjectId, toolPattern: r.toolPattern, action: r.action,
+        })
+      }
+    }
+
+    // ─── Restore webhooks ───
+    if (manifest.webhooks?.length) {
+      for (const w of manifest.webhooks) {
+        await db.insert(schema.webhooks).values({
+          userId, projectId: newProjectId,
+          name: w.name, url: w.url, secret: w.secret,
+          events: w.events, isEnabled: w.isEnabled,
+        })
+      }
+    }
+
+    // ─── Restore deploy pipelines ───
+    if (manifest.pipelines?.length) {
+      for (const p of manifest.pipelines) {
+        const newId = crypto.randomUUID()
+        pipelineIdMap.set(p.id, newId)
+        await db.insert(schema.deployPipelines).values({
+          id: newId, projectId: newProjectId, userId,
+          name: p.name, branchPattern: p.branchPattern,
+          sftpHost: p.sftpHost, sftpPort: p.sftpPort,
+          sftpUsername: p.sftpUsername,
+          sftpPasswordEncrypted: p.sftpPasswordEncrypted,
+          sftpPrivateKeyEncrypted: p.sftpPrivateKeyEncrypted,
+          sftpRemotePath: p.sftpRemotePath,
+          sftpSourcePath: p.sftpSourcePath,
+          preDeployCommand: p.preDeployCommand,
+          webhookUrl: p.webhookUrl, webhookType: p.webhookType,
+          isEnabled: p.isEnabled,
+        })
+      }
+    }
+
+    // ─── Restore deploy runs ───
+    if (manifest.deployRuns?.length) {
+      for (const r of manifest.deployRuns) {
+        const pipelineId = pipelineIdMap.get(r.pipelineId)
+        if (!pipelineId) continue
+        await db.insert(schema.deployRuns).values({
+          pipelineId, projectId: newProjectId, userId,
+          branch: r.branch, commitHash: r.commitHash,
+          status: r.status, filesUploaded: r.filesUploaded,
+          error: r.error, webhookStatus: r.webhookStatus,
+          durationMs: r.durationMs,
+        })
+      }
+    }
+
+    // ─── Extract files ───
     const filesEntries = zip.getEntries().filter((e: any) => e.entryName.startsWith('files/') && !e.isDirectory)
     for (const entry of filesEntries) {
       const relativePath = entry.entryName.replace('files/', '')
@@ -494,6 +636,9 @@ router.post('/import-backup', upload.single('backup'), async (req: Authenticated
       meta: {
         sessions: manifest.sessions?.length || 0,
         messages: manifest.messages?.length || 0,
+        tasks: manifest.tasks?.length || 0,
+        notes: manifest.notes?.length || 0,
+        pipelines: manifest.pipelines?.length || 0,
         files: filesEntries.length,
       },
     })
