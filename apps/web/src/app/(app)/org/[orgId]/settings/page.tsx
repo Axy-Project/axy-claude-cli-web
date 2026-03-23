@@ -134,6 +134,38 @@ export default function OrgSettingsPage() {
         </div>
       )}
 
+      {/* Organization Avatar */}
+      <div className="flex items-center gap-4 rounded-lg border border-[var(--border)] bg-[var(--card)] px-6 py-4">
+        <div className="relative">
+          {org?.avatarUrl ? (
+            <img src={org.avatarUrl} alt="" className="h-16 w-16 rounded-xl object-cover" />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--primary)]/20 text-2xl font-bold text-[var(--primary)]">
+              {org?.name?.[0]?.toUpperCase() || 'O'}
+            </div>
+          )}
+          <label className="absolute -bottom-1 -right-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-[var(--primary)] text-white shadow hover:opacity-90">
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              const formData = new FormData()
+              formData.append('avatar', file)
+              const token = localStorage.getItem('axy_token')
+              const apiUrl = (typeof window !== 'undefined' && (window.location.port === '' || window.location.port === '80' || window.location.port === '443')) ? `${window.location.protocol}//${window.location.hostname}` : `${window.location.protocol}//${window.location.hostname}:3456`
+              const res = await fetch(`${apiUrl}/api/orgs/${orgId}/avatar`, {
+                method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData,
+              })
+              if (res.ok) window.location.reload()
+            }} />
+          </label>
+        </div>
+        <div>
+          <h3 className="font-medium">{org?.name}</h3>
+          <p className="text-xs text-[var(--muted-foreground)]">Click the + to upload an organization logo</p>
+        </div>
+      </div>
+
       {/* General settings */}
       <form
         onSubmit={handleSubmit}

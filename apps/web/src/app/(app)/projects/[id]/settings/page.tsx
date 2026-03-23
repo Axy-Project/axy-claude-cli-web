@@ -175,6 +175,38 @@ export default function ProjectSettingsPage() {
     <div className="mx-auto max-w-lg space-y-6">
       <h2 className="text-lg font-semibold">Project Settings</h2>
 
+      {/* Project Avatar */}
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          {project.avatarUrl ? (
+            <img src={project.avatarUrl} alt="" className="h-16 w-16 rounded-xl object-cover" />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[var(--primary)]/20 text-2xl font-bold text-[var(--primary)]">
+              {project.name[0]?.toUpperCase()}
+            </div>
+          )}
+          <label className="absolute -bottom-1 -right-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-[var(--primary)] text-white shadow hover:opacity-90">
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              const formData = new FormData()
+              formData.append('avatar', file)
+              const token = localStorage.getItem('axy_token')
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL || ((window.location.port === '' || window.location.port === '80' || window.location.port === '443') ? `${window.location.protocol}//${window.location.hostname}` : `${window.location.protocol}//${window.location.hostname}:3456`)
+              const res = await fetch(`${apiUrl}/api/projects/${projectId}/avatar`, {
+                method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData,
+              })
+              if (res.ok) window.location.reload()
+            }} />
+          </label>
+        </div>
+        <div>
+          <h3 className="font-medium">{project.name}</h3>
+          <p className="text-xs text-[var(--muted-foreground)]">Click the + to upload a project logo</p>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="mb-1 block text-sm font-medium">Project Name *</label>

@@ -10,6 +10,48 @@ router.use(authMiddleware)
 // Track active login processes
 const activeLogins = new Map<string, { process: any; url: string | null; status: string }>()
 
+/** GET /api/claude/version - Check Claude CLI version + update availability */
+router.get('/version', async (_req: AuthenticatedRequest, res) => {
+  try {
+    const { execSync } = await import('child_process')
+    let currentVersion = 'unknown'
+    try {
+      currentVersion = execSync(`${config.claudePath} --version 2>/dev/null || echo unknown`, {
+        timeout: 5000, encoding: 'utf-8', env: { ...process.env, NO_COLOR: '1' },
+      }).trim().replace(/^.*?(\d+\.\d+\.\d+).*$/, '$1')
+    } catch { /* CLI not installed */ }
+
+    // Check latest version from npm registry
+    let latestVersion: string | null = null
+    try {
+      const npmRes = await fetch('https://registry.npmjs.org/@anthropic-ai/claude-code/latest')
+      if (npmRes.ok) {
+        const data = await npmRes.json() as { version?: string }
+        latestVersion = data.version || null
+      }
+    } catch { /* npm unreachable */ }
+
+    const updateAvailable = latestVersion && currentVersion !== 'unknown' && latestVersion !== currentVersion
+    res.json({ success: true, data: { current: currentVersion, latest: latestVersion, updateAvailable } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** POST /api/claude/update - Update Claude CLI to latest version */
+router.post('/update', async (_req: AuthenticatedRequest, res) => {
+  try {
+    const { exec } = await import('child_process')
+    exec('npm install -g @anthropic-ai/claude-code@latest 2>&1', { timeout: 120000 }, (err, stdout, stderr) => {
+      if (err) console.error('[Claude] Update failed:', stderr || err.message)
+      else console.log('[Claude] Updated:', stdout.slice(-200))
+    })
+    res.json({ success: true, message: 'Claude CLI update started' })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
 /** GET /api/claude/status - Check Claude CLI auth status */
 router.get('/status', async (req: AuthenticatedRequest, res) => {
   try {

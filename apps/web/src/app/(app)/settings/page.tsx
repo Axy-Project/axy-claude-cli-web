@@ -100,20 +100,17 @@ export default function UserSettingsPage() {
     }
   }
 
-  const applyLightDarkTheme = (theme: 'light' | 'dark' | 'system') => {
+  const applyLightDarkTheme = (t: 'light' | 'dark' | 'system') => {
     const root = document.documentElement
-    // next-themes uses class-based switching
     root.classList.remove('light', 'dark')
-    if (theme === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      root.classList.add(prefersDark ? 'dark' : 'light')
-      root.style.colorScheme = prefersDark ? 'dark' : 'light'
-    } else {
-      root.classList.add(theme)
-      root.style.colorScheme = theme
-    }
-    // Also set localStorage for next-themes to pick up on reload
-    localStorage.setItem('theme', theme)
+    const resolved = t === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : t
+    root.classList.add(resolved)
+    root.style.colorScheme = resolved
+    // Sync with next-themes (uses 'theme' key)
+    localStorage.setItem('theme', t)
+    localStorage.setItem('axy_theme', t)
   }
 
   const handleSelectColorTheme = (id: string) => {
@@ -192,7 +189,7 @@ export default function UserSettingsPage() {
               <button
                 key={theme}
                 type="button"
-                onClick={() => setForm({ ...form, theme })}
+                onClick={() => { setForm({ ...form, theme }); applyLightDarkTheme(theme) }}
                 className={`flex-1 rounded-lg border px-4 py-3 text-sm font-medium capitalize transition-colors ${
                   form.theme === theme
                     ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]'
