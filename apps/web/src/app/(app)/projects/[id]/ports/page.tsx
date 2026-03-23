@@ -169,6 +169,8 @@ export default function PortsPage() {
       : `${window.location.protocol}//${window.location.hostname}:3456`
     : ''
   const proxyUrl = (port: number, path = '/') => `${apiBase}/api/ports/${port}/proxy${path}`
+  // Direct URL for opening in new tab (bypasses double-proxy issues)
+  const directUrl = (port: number) => typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:${port}` : ''
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -364,11 +366,11 @@ export default function PortsPage() {
                 )}
               </button>
               <a
-                href={proxyUrl(previewPort)}
+                href={directUrl(previewPort)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded p-1 text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
-                title="Open in new tab"
+                title="Open in new tab (direct)"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

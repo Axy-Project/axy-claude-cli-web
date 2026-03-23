@@ -44,6 +44,8 @@ services:
       - ${COMPOSE_PROJECT_DIR:-.}:/opt/axy-src:ro  # Read-only mount for update detection
     ports:
       - "${SERVER_PORT:-3456}:3456"
+      - "4456:4456"  # Dev project server
+      - "4457:4457"  # Dev project web (preview)
 
   web:
     build:
