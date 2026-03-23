@@ -58,10 +58,33 @@ router.post('/login', async (req, res) => {
       return
     }
 
+    const { totpCode } = req.body
     const result = await setupService.loginLocal(email, password)
     if (!result) {
       res.status(401).json({ success: false, error: 'Invalid email or password' })
       return
+    }
+
+    // Check if 2FA is enabled for this user
+    const { db, schema } = await import('../db/index.js')
+    const [userRow] = await db.select({ totpEnabled: schema.users.totpEnabled, totpSecretEncrypted: schema.users.totpSecretEncrypted })
+      .from(schema.users).where(eq(schema.users.id, result.user.id)).limit(1)
+
+    if (userRow?.totpEnabled && userRow.totpSecretEncrypted) {
+      if (!totpCode) {
+        res.json({ success: true, data: { requires2FA: true, userId: result.user.id } })
+        return
+      }
+      // Verify TOTP code
+      const { TOTP, Secret } = await import('otpauth')
+      const { decryptToken } = await import('../services/auth.service.js')
+      const secretBase32 = decryptToken(userRow.totpSecretEncrypted)
+      const totp = new TOTP({ issuer: 'Axy', label: email, algorithm: 'SHA1', digits: 6, period: 30, secret: Secret.fromBase32(secretBase32) })
+      const delta = totp.validate({ token: totpCode, window: 1 })
+      if (delta === null) {
+        res.status(403).json({ success: false, error: 'Invalid 2FA code' })
+        return
+      }
     }
 
     res.json({ success: true, data: result })
@@ -176,6 +199,38 @@ router.patch('/users/:id', authMiddleware, async (req: AuthenticatedRequest, res
       return
     }
     await db.update(schema.users).set(updates).where(eq(schema.users.id, param(req, 'id')))
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** POST /api/setup/users — Admin creates a new user */
+router.post('/users', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { email, displayName, password, isAdmin: makeAdmin } = req.body
+    if (!email || !displayName || !password) {
+      res.status(400).json({ success: false, error: 'email, displayName, and password are required' })
+      return
+    }
+    const result = await setupService.registerLocal(email, password, displayName)
+    // Optionally set admin
+    if (makeAdmin) {
+      const { db, schema } = await import('../db/index.js')
+      await db.update(schema.users).set({ isAdmin: true }).where(eq(schema.users.id, result.user.id))
+    }
+    res.status(201).json({ success: true, data: { id: result.user.id, email, displayName } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** PUT /api/setup/users/:id/avatar — Update user avatar URL */
+router.put('/users/:id/avatar', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { avatarUrl } = req.body
+    const { db, schema } = await import('../db/index.js')
+    await db.update(schema.users).set({ avatarUrl }).where(eq(schema.users.id, param(req, 'id')))
     res.json({ success: true })
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message })

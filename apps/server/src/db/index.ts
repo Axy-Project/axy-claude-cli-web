@@ -337,6 +337,11 @@ if (config.useSqlite) {
       sqlite.exec("ALTER TABLE users ADD COLUMN is_approved INTEGER NOT NULL DEFAULT 1")
       console.log('[DB] Migrated: added is_approved to users')
     }
+    if (!userCols.some((c) => c.name === 'totp_secret_encrypted')) {
+      sqlite.exec("ALTER TABLE users ADD COLUMN totp_secret_encrypted TEXT")
+      sqlite.exec("ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0")
+      console.log('[DB] Migrated: added 2FA columns to users')
+    }
   } catch { /* table might not exist yet */ }
 
   // Create system_settings table
@@ -470,6 +475,8 @@ if (config.useSqlite) {
         github_token_encrypted TEXT,
         is_admin BOOLEAN NOT NULL DEFAULT false,
         is_approved BOOLEAN NOT NULL DEFAULT true,
+        totp_secret_encrypted TEXT,
+        totp_enabled BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );

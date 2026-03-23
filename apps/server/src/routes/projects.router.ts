@@ -611,10 +611,10 @@ router.post('/import-backup', upload.single('backup'), async (req: Authenticated
         await db.insert(schema.sessions).values({
           id: newId, projectId: newProjectId, userId,
           title: s.title, model: s.model, mode: s.mode,
-          cliSessionId: s.cliSessionId,
-          totalInputTokens: s.totalInputTokens || 0,
-          totalOutputTokens: s.totalOutputTokens || 0,
-          totalCostUsd: s.totalCostUsd || 0,
+          cliSessionId: null, // Don't carry over CLI session IDs
+          totalInputTokens: 0, // Reset tokens — imported data is historical
+          totalOutputTokens: 0,
+          totalCostUsd: 0,
         })
       }
     }

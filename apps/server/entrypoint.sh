@@ -2,6 +2,10 @@
 # Fix permissions for existing volumes that were created by older (root) versions
 chown -R axy:axy /data 2>/dev/null || true
 
+# Ensure Claude config directory exists and has correct ownership
+mkdir -p /home/axy/.claude 2>/dev/null || true
+chown -R axy:axy /home/axy 2>/dev/null || true
+
 # Give axy user access to the Docker socket (needed for self-update)
 if [ -S /var/run/docker.sock ]; then
   DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)

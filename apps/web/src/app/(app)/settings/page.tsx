@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth.store'
 import { useAccountStore } from '@/stores/account.store'
 import { api } from '@/lib/api-client'
@@ -101,12 +102,18 @@ export default function UserSettingsPage() {
 
   const applyLightDarkTheme = (theme: 'light' | 'dark' | 'system') => {
     const root = document.documentElement
+    // next-themes uses class-based switching
+    root.classList.remove('light', 'dark')
     if (theme === 'system') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      root.setAttribute('data-theme', prefersDark ? 'dark' : 'light')
+      root.classList.add(prefersDark ? 'dark' : 'light')
+      root.style.colorScheme = prefersDark ? 'dark' : 'light'
     } else {
-      root.setAttribute('data-theme', theme)
+      root.classList.add(theme)
+      root.style.colorScheme = theme
     }
+    // Also set localStorage for next-themes to pick up on reload
+    localStorage.setItem('theme', theme)
   }
 
   const handleSelectColorTheme = (id: string) => {
@@ -507,6 +514,12 @@ export default function UserSettingsPage() {
         tokenPlaceholder="sk-ant-xxxxxxxxxxxxxxxxxxxx"
       />
 
+      {/* Two-Factor Authentication */}
+      <TwoFactorSection />
+
+      {/* Developer Mode */}
+      {user?.isAdmin && <DeveloperModeSection />}
+
       {/* Admin: GitHub OAuth Config */}
       {user?.isAdmin && <GitHubOAuthSection />}
 
@@ -640,14 +653,171 @@ interface ManagedUser {
   isAdmin: boolean; isApproved: boolean; createdAt: string
 }
 
+function TwoFactorSection() {
+  const [enabled, setEnabled] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [setupData, setSetupData] = useState<{ secret: string; uri: string } | null>(null)
+  const [verifyCode, setVerifyCode] = useState('')
+  const [disablePassword, setDisablePassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [showDisable, setShowDisable] = useState(false)
+
+  useEffect(() => {
+    api.get<{ enabled: boolean }>('/api/auth/totp/status')
+      .then((d) => setEnabled(d.enabled)).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  const handleSetup = async () => {
+    setError(null)
+    try {
+      const data = await api.post<{ secret: string; uri: string }>('/api/auth/totp/setup', {})
+      setSetupData(data)
+    } catch (err) { setError((err as Error).message) }
+  }
+
+  const handleVerify = async () => {
+    if (!verifyCode.trim()) return
+    setError(null)
+    try {
+      await api.post('/api/auth/totp/verify', { code: verifyCode })
+      setEnabled(true)
+      setSetupData(null)
+      setVerifyCode('')
+    } catch (err) { setError((err as Error).message) }
+  }
+
+  const handleDisable = async () => {
+    if (!disablePassword) { setError('Password required'); return }
+    setError(null)
+    try {
+      await api.post('/api/auth/totp/disable', { password: disablePassword })
+      setEnabled(false)
+      setShowDisable(false)
+      setDisablePassword('')
+    } catch (err) { setError((err as Error).message) }
+  }
+
+  if (loading) return null
+
+  return (
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
+      <h2 className="mb-1 font-medium">Two-Factor Authentication</h2>
+      <p className="text-xs text-[var(--muted-foreground)]">
+        {enabled ? '2FA is enabled. Your account is protected with an authenticator app.' : 'Add an extra layer of security to your account.'}
+      </p>
+
+      {enabled ? (
+        <div className="mt-3">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-green-400" />
+            <span className="text-sm font-medium text-green-400">Enabled</span>
+          </div>
+          {!showDisable ? (
+            <button onClick={() => setShowDisable(true)} className="mt-2 rounded-lg border border-[var(--destructive)] px-3 py-1.5 text-xs text-[var(--destructive)] hover:bg-[var(--destructive)]/10">
+              Disable 2FA
+            </button>
+          ) : (
+            <div className="mt-2 space-y-2">
+              <input type="password" value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)} placeholder="Enter your password"
+                onKeyDown={(e) => e.key === 'Enter' && handleDisable()}
+                className="w-full rounded-lg border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-sm outline-none" />
+              <div className="flex gap-2">
+                <button onClick={handleDisable} className="rounded-lg bg-[var(--destructive)] px-3 py-1.5 text-xs text-white">Confirm Disable</button>
+                <button onClick={() => { setShowDisable(false); setDisablePassword('') }} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : !setupData ? (
+        <button onClick={handleSetup} className="mt-3 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90">
+          Enable 2FA
+        </button>
+      ) : (
+        <div className="mt-3 space-y-3">
+          <div className="rounded-lg bg-[var(--background)] p-3">
+            <p className="text-xs font-medium">1. Scan this with your authenticator app (Google Authenticator, Authy, etc.):</p>
+            <div className="mt-2 flex items-center justify-center rounded-lg bg-white p-4">
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(setupData.uri)}`} alt="QR Code" className="h-48 w-48" />
+            </div>
+            <p className="mt-2 text-xs text-[var(--muted-foreground)]">Or enter manually: <code className="rounded bg-[var(--secondary)] px-1.5 py-0.5 text-[10px]">{setupData.secret}</code></p>
+          </div>
+          <div>
+            <p className="text-xs font-medium">2. Enter the 6-digit code from your app:</p>
+            <div className="mt-1 flex gap-2">
+              <input type="text" value={verifyCode} onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" maxLength={6}
+                onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
+                className="w-32 rounded-lg border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-center font-mono text-lg tracking-widest outline-none focus:border-[var(--primary)]" />
+              <button onClick={handleVerify} disabled={verifyCode.length !== 6} className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Verify</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {error && <p className="mt-2 text-xs text-[var(--destructive)]">{error}</p>}
+    </div>
+  )
+}
+
+function DeveloperModeSection() {
+  const router = useRouter()
+  const [isCloning, setIsCloning] = useState(false)
+  const [status, setStatus] = useState<string | null>(null)
+
+  const handleCreateDevProject = async () => {
+    setIsCloning(true)
+    setStatus('Creating Axy development project...')
+    try {
+      // Create the project
+      const project = await api.post<{ id: string }>('/api/projects', {
+        name: 'axy-dev (self)',
+        description: 'Axy development environment — develop Axy inside Axy',
+      })
+      setStatus('Cloning Axy repository...')
+      // Clone the repo
+      await api.post('/api/git/clone', {
+        repoUrl: 'https://github.com/Axy-Project/axy-claude-cli-web.git',
+        projectId: project.id,
+        branch: 'main',
+      })
+      setStatus('Done! Redirecting...')
+      setTimeout(() => router.push(`/projects/${project.id}`), 500)
+    } catch (err) {
+      setStatus(`Error: ${(err as Error).message}`)
+      setIsCloning(false)
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5">
+      <h3 className="text-sm font-semibold">Developer Mode</h3>
+      <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+        Create an Axy development project to work on Axy itself from within Axy.
+      </p>
+      <button
+        onClick={handleCreateDevProject}
+        disabled={isCloning}
+        className="mt-3 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+      >
+        {isCloning ? 'Setting up...' : 'Create Axy Dev Project'}
+      </button>
+      {status && <p className="mt-2 text-xs text-[var(--muted-foreground)]">{status}</p>}
+    </div>
+  )
+}
+
 function UserManagementSection() {
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
+  const [newUser, setNewUser] = useState({ email: '', displayName: '', password: '', isAdmin: false })
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
 
-  useEffect(() => {
+  const loadUsers = useCallback(() => {
     api.get<ManagedUser[]>('/api/setup/users')
       .then(setUsers).catch(() => {}).finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { loadUsers() }, [loadUsers])
 
   const handleToggle = async (userId: string, field: 'isAdmin' | 'isApproved', value: boolean) => {
     await api.patch(`/api/setup/users/${userId}`, { [field]: value })
@@ -658,8 +828,38 @@ function UserManagementSection() {
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5">
-      <h3 className="text-sm font-semibold">User Management ({users.length})</h3>
-      <p className="mt-1 text-xs text-[var(--muted-foreground)]">All registered users. Toggle admin or access.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold">User Management ({users.length})</h3>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">All registered users. Toggle admin or access.</p>
+        </div>
+        <button onClick={() => setShowCreate(!showCreate)} className="rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">
+          {showCreate ? 'Cancel' : 'Create User'}
+        </button>
+      </div>
+      {showCreate && (
+        <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--background)] p-3">
+          <div className="grid grid-cols-2 gap-2">
+            <input type="text" value={newUser.displayName} onChange={(e) => setNewUser({ ...newUser, displayName: e.target.value })} placeholder="Display Name" className="rounded-lg border border-[var(--input)] bg-[var(--card)] px-3 py-1.5 text-sm outline-none" />
+            <input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder="Email" className="rounded-lg border border-[var(--input)] bg-[var(--card)] px-3 py-1.5 text-sm outline-none" />
+            <input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder="Password" className="rounded-lg border border-[var(--input)] bg-[var(--card)] px-3 py-1.5 text-sm outline-none" />
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={newUser.isAdmin} onChange={(e) => setNewUser({ ...newUser, isAdmin: e.target.checked })} /> Admin</label>
+          </div>
+          {createError && <p className="mt-1 text-xs text-[var(--destructive)]">{createError}</p>}
+          <button onClick={async () => {
+            if (!newUser.email || !newUser.displayName || !newUser.password) { setCreateError('All fields required'); return }
+            setIsCreating(true); setCreateError(null)
+            try {
+              await api.post('/api/setup/users', newUser)
+              setShowCreate(false); setNewUser({ email: '', displayName: '', password: '', isAdmin: false })
+              loadUsers()
+            } catch (err) { setCreateError((err as Error).message) }
+            finally { setIsCreating(false) }
+          }} disabled={isCreating} className="mt-2 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">
+            {isCreating ? 'Creating...' : 'Create'}
+          </button>
+        </div>
+      )}
       <div className="mt-3 space-y-2">
         {users.map((u) => (
           <div key={u.id} className="flex items-center justify-between rounded-[0.375rem] bg-[var(--background)] px-4 py-2.5">

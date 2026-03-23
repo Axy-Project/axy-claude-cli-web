@@ -12,6 +12,8 @@ export const users = sqliteTable('users', {
   githubTokenEncrypted: text('github_token_encrypted'),
   isAdmin: integer('is_admin', { mode: 'boolean' }).notNull().default(false),
   isApproved: integer('is_approved', { mode: 'boolean' }).notNull().default(true),
+  totpSecretEncrypted: text('totp_secret_encrypted'),
+  totpEnabled: integer('totp_enabled', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
 })

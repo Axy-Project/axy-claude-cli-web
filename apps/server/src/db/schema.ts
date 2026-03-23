@@ -12,6 +12,8 @@ export const users = pgTable('users', {
   githubTokenEncrypted: text('github_token_encrypted'),
   isAdmin: boolean('is_admin').notNull().default(false),
   isApproved: boolean('is_approved').notNull().default(true),
+  totpSecretEncrypted: text('totp_secret_encrypted'),
+  totpEnabled: boolean('totp_enabled').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })

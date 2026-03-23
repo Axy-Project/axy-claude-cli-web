@@ -39,6 +39,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
     volumes:
       - projects:/data/projects
+      - claude-config:/home/axy/.claude
       - /var/run/docker.sock:/var/run/docker.sock
       - ${COMPOSE_PROJECT_DIR:-.}:/opt/axy-src:ro
     ports:
@@ -59,3 +60,4 @@ services:
 volumes:
   pgdata:
   projects:
+  claude-config:
