@@ -65,6 +65,7 @@ export const projects = sqliteTable('projects', {
   orgId: text('org_id').references(() => organizations.id),
   name: text('name').notNull(),
   description: text('description'),
+  avatarUrl: text('avatar_url'),
   localPath: text('local_path').notNull(),
   githubRepoUrl: text('github_repo_url'),
   githubRepoFullName: text('github_repo_full_name'),

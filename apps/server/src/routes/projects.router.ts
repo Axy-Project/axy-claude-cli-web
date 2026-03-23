@@ -517,7 +517,18 @@ JWT_SECRET=dev-secret-change-in-production
       await fs.writeFile(webPkgPath, JSON.stringify(webPkg, null, 2) + '\n')
     } catch { /* web package.json might not exist yet */ }
 
-    res.json({ success: true, message: 'Dev ports configured: server=4456, web=4457' })
+    // Install dependencies in background
+    const { exec } = await import('child_process')
+    exec('pnpm install --frozen-lockfile 2>&1 || pnpm install 2>&1', {
+      cwd: project.localPath,
+      timeout: 300000,
+      env: { ...process.env, HOME: '/home/axy' },
+    }, (err, stdout, stderr) => {
+      if (err) console.error('[DevSetup] pnpm install failed:', stderr || err.message)
+      else console.log('[DevSetup] Dependencies installed:', stdout.slice(-200))
+    })
+
+    res.json({ success: true, message: 'Dev ports configured: server=4456, web=4457. Dependencies installing in background.' })
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message })
   }

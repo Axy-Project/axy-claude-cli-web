@@ -81,6 +81,7 @@ export interface Project {
   orgId?: string
   name: string
   description?: string
+  avatarUrl?: string
   localPath: string
   githubRepoUrl?: string
   githubRepoFullName?: string

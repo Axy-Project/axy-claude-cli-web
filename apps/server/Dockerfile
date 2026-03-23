@@ -50,8 +50,11 @@ RUN pnpm --filter @axy/server build
 FROM node:22-alpine AS runner
 
 # git is needed by simple-git, bash/curl for Claude CLI installer
-# docker-cli for self-update (static binary, compatible with Alpine/musl)
-RUN apk add --no-cache git bash curl docker-cli docker-cli-compose
+# docker-cli for self-update, python3/make/g++ for native modules in dev projects
+RUN apk add --no-cache git bash curl docker-cli docker-cli-compose python3 make g++
+
+# Enable corepack for pnpm (needed for dev projects)
+RUN corepack enable && corepack prepare pnpm@10.30.2 --activate
 
 # Install Claude CLI (requires npm which comes with node)
 RUN npm install -g @anthropic-ai/claude-code || true

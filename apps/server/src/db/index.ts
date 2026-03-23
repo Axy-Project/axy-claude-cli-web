@@ -356,6 +356,10 @@ if (config.useSqlite) {
   // Migration: add auto-deploy columns to projects
   try {
     const projCols2 = sqlite.prepare("PRAGMA table_info('projects')").all() as { name: string }[]
+    if (!projCols2.some((c) => c.name === 'avatar_url')) {
+      sqlite.exec("ALTER TABLE projects ADD COLUMN avatar_url TEXT")
+      console.log('[DB] Migrated: added avatar_url to projects')
+    }
     if (!projCols2.some((c) => c.name === 'auto_push_to_github')) {
       sqlite.exec("ALTER TABLE projects ADD COLUMN auto_push_to_github INTEGER NOT NULL DEFAULT 0")
       console.log('[DB] Migrated: added auto_push_to_github to projects')
@@ -758,6 +762,7 @@ if (config.useSqlite) {
       { table: 'sessions', column: 'cli_session_id', sql: 'ALTER TABLE sessions ADD COLUMN cli_session_id TEXT' },
       { table: 'sessions', column: 'effort', sql: "ALTER TABLE sessions ADD COLUMN effort TEXT NOT NULL DEFAULT 'medium'" },
       { table: 'sessions', column: 'is_pinned', sql: 'ALTER TABLE sessions ADD COLUMN is_pinned BOOLEAN DEFAULT false' },
+      { table: 'projects', column: 'avatar_url', sql: 'ALTER TABLE projects ADD COLUMN avatar_url TEXT' },
       { table: 'projects', column: 'auto_push_to_github', sql: 'ALTER TABLE projects ADD COLUMN auto_push_to_github BOOLEAN NOT NULL DEFAULT false' },
       { table: 'projects', column: 'auto_deploy_on_change', sql: 'ALTER TABLE projects ADD COLUMN auto_deploy_on_change BOOLEAN NOT NULL DEFAULT false' },
       { table: 'projects', column: 'github_account_id', sql: 'ALTER TABLE projects ADD COLUMN github_account_id UUID' },

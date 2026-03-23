@@ -67,6 +67,7 @@ export const projects = pgTable('projects', {
   orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
   description: text('description'),
+  avatarUrl: text('avatar_url'),
   localPath: text('local_path').notNull(),
   githubRepoUrl: text('github_repo_url'),
   githubRepoFullName: text('github_repo_full_name'),
