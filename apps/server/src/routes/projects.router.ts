@@ -189,21 +189,28 @@ router.post('/:id/move', async (req: AuthenticatedRequest, res) => {
   }
 })
 
-/** DELETE /api/projects/:id — Requires password confirmation */
+/** DELETE /api/projects/:id — Requires password or project name confirmation */
 router.delete('/:id', async (req: AuthenticatedRequest, res) => {
   try {
-    const { password } = req.body as { password?: string }
-    if (!password) {
-      res.status(400).json({ success: false, error: 'Password is required to delete a project' })
-      return
-    }
+    const { password, confirmName } = req.body as { password?: string; confirmName?: string }
 
-    // Verify password matches the user's account
-    const { setupService } = await import('../services/setup.service.js')
-    const loginResult = await setupService.verifyPassword(req.userId!, password)
-    if (!loginResult) {
-      res.status(403).json({ success: false, error: 'Incorrect password' })
-      return
+    // Check if user has a password (local auth) or is GitHub-only
+    const { db, schema } = await import('../db/index.js')
+    const { eq } = await import('drizzle-orm')
+    const [user] = await db.select({ passwordHash: schema.users.passwordHash }).from(schema.users).where(eq(schema.users.id, req.userId!)).limit(1)
+    const hasPassword = !!user?.passwordHash
+
+    if (hasPassword) {
+      // Local auth: verify password
+      if (!password) { res.status(400).json({ success: false, error: 'Password is required to delete a project' }); return }
+      const { setupService } = await import('../services/setup.service.js')
+      const valid = await setupService.verifyPassword(req.userId!, password)
+      if (!valid) { res.status(403).json({ success: false, error: 'Incorrect password' }); return }
+    } else {
+      // GitHub auth: verify by typing project name
+      if (!confirmName) { res.status(400).json({ success: false, error: 'Type the project name to confirm deletion' }); return }
+      const project = await projectService.getById(param(req, 'id'), req.userId!)
+      if (!project || project.name !== confirmName) { res.status(403).json({ success: false, error: 'Project name does not match' }); return }
     }
 
     const deleted = await projectService.delete(param(req, 'id'), req.userId!)

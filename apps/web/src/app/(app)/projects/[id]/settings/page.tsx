@@ -27,8 +27,10 @@ export default function ProjectSettingsPage() {
   const [importResult, setImportResult] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deletePassword, setDeletePassword] = useState('')
+  const [deleteConfirmName, setDeleteConfirmName] = useState('')
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [userHasPassword, setUserHasPassword] = useState(true)
   const [orgs, setOrgs] = useState<Organization[]>([])
   const [isMoving, setIsMoving] = useState(false)
   const [form, setForm] = useState({
@@ -45,6 +47,9 @@ export default function ProjectSettingsPage() {
   useEffect(() => {
     fetchAccounts()
     api.get<Organization[]>('/api/orgs').then(setOrgs).catch(() => {})
+    // Check if user has password (local auth) or is GitHub-only
+    const authUser = useAuthStore.getState().user
+    setUserHasPassword(!!authUser?.githubUsername === false)
   }, [fetchAccounts])
 
   useEffect(() => {
@@ -88,11 +93,21 @@ export default function ProjectSettingsPage() {
   }
 
   const handleDelete = async () => {
-    if (!deletePassword) { setDeleteError('Enter your password'); return }
+    const hasGithub = !!useAuthStore.getState().user?.githubUsername
+    if (hasGithub && !deleteConfirmName) { setDeleteError('Type the project name to confirm'); return }
+    if (!hasGithub && !deletePassword) { setDeleteError('Enter your password'); return }
     setIsDeleting(true)
     setDeleteError(null)
     try {
-      await deleteProject(projectId, deletePassword)
+      // Send both — server picks the right verification
+      await api.delete(`/api/projects/${projectId}`, {
+        password: deletePassword || undefined,
+        confirmName: deleteConfirmName || undefined,
+      })
+      useProjectStore.setState((s) => ({
+        projects: s.projects.filter(p => p.id !== projectId),
+        currentProject: null,
+      }))
       router.push('/projects')
     } catch (err) {
       setDeleteError((err as Error).message || 'Failed to delete')
@@ -469,18 +484,37 @@ export default function ProjectSettingsPage() {
           </button>
         ) : (
           <div className="mt-3 space-y-3 rounded-lg border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-3">
-            <p className="text-sm font-medium text-[var(--destructive)]">
-              Enter your password to confirm deletion of &quot;{project?.name}&quot;
-            </p>
-            <input
-              type="password"
-              value={deletePassword}
-              onChange={(e) => setDeletePassword(e.target.value)}
-              placeholder="Your password"
-              autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && handleDelete()}
-              className="w-full rounded-lg border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--destructive)]"
-            />
+            {useAuthStore.getState().user?.githubUsername ? (
+              <>
+                <p className="text-sm font-medium text-[var(--destructive)]">
+                  Type <strong>{project?.name}</strong> to confirm deletion
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmName}
+                  onChange={(e) => setDeleteConfirmName(e.target.value)}
+                  placeholder={project?.name}
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleDelete()}
+                  className="w-full rounded-lg border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--destructive)]"
+                />
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-[var(--destructive)]">
+                  Enter your password to confirm deletion of &quot;{project?.name}&quot;
+                </p>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Your password"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleDelete()}
+                  className="w-full rounded-lg border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--destructive)]"
+                />
+              </>
+            )}
             {deleteError && (
               <p className="text-xs text-[var(--destructive)]">{deleteError}</p>
             )}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { api } from '@/lib/api-client'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: 'M3 3h7v7H3V3zm11 0h7v7h-7V3zm-11 11h7v7H3v-7zm11 0h7v7h-7v-7z' },
@@ -24,6 +25,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
+  const [version, setVersion] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/health').then(r => r.json()).then(d => setVersion(d.version)).catch(() => {})
+  }, [])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -132,6 +138,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 Star on GitHub
               </a>
             </div>
+          )}
+          {/* Version */}
+          {version && !collapsed && (
+            <p className="mt-2 px-4 text-[10px] text-[var(--muted-foreground)]/50">v{version}</p>
+          )}
+          {version && collapsed && (
+            <p className="mt-2 text-center text-[9px] text-[var(--muted-foreground)]/50">{version}</p>
           )}
         </div>
       </aside>
