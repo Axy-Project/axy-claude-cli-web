@@ -80,18 +80,39 @@ router.post('/update', async (_req, res) => {
           // The sidecar runs detached (-d) and survives the server's death.
           const composeFile = `${hostWorkDir}/docker-compose.yml`
           const envFile = `${hostWorkDir}/.env`
+          const compose = `docker compose -p "${projectName}" -f "${composeFile}" --env-file "${envFile}" --project-directory "${hostWorkDir}"`
 
-          // Try pull first, then up -d via sidecar
-          const sidecarScript = [
-            `docker compose -p "${projectName}" -f "${composeFile}" --env-file "${envFile}" --project-directory "${hostWorkDir}" pull 2>&1`,
-            `docker compose -p "${projectName}" -f "${composeFile}" --env-file "${envFile}" --project-directory "${hostWorkDir}" up -d 2>&1`,
-          ].join(' && ')
+          // Detect build-from-source: check if .git exists in host work dir (mounted at /opt/axy-src)
+          const isBuildFromSource = fs.existsSync('/opt/axy-src/.git')
+          console.log(`[Update] Mode: ${isBuildFromSource ? 'build-from-source' : 'pre-built images'}`)
 
-          // Launch a lightweight Alpine container with docker CLI to run the update
+          let sidecarScript: string
+          if (isBuildFromSource) {
+            // Build-from-source: git pull + rebuild images
+            sidecarScript = [
+              `git -C "${hostWorkDir}" pull origin main 2>&1`,
+              `${compose} build --no-cache 2>&1`,
+              `${compose} up -d 2>&1`,
+            ].join(' && ')
+          } else {
+            // Pre-built images: pull + restart
+            sidecarScript = [
+              `${compose} pull 2>&1`,
+              `${compose} up -d 2>&1`,
+            ].join(' && ')
+          }
+
+          // Use alpine/git image (has both git and docker via socket) for build-from-source
+          // docker:cli for pre-built (lighter)
+          const sidecarImage = isBuildFromSource ? 'alpine:latest' : 'docker:cli'
+          const installDeps = isBuildFromSource
+            ? 'apk add --no-cache git docker-cli docker-cli-compose && '
+            : ''
+
           const updateCmd = `docker run --rm -d ` +
             `-v /var/run/docker.sock:/var/run/docker.sock ` +
-            `-v "${hostWorkDir}:${hostWorkDir}:ro" ` +
-            `docker:cli sh -c '${sidecarScript}'`
+            `-v "${hostWorkDir}:${hostWorkDir}" ` +
+            `${sidecarImage} sh -c '${installDeps}${sidecarScript}'`
 
           console.log('[Update] Launching sidecar update container')
           exec(updateCmd, { timeout: 30000 }, (upErr, upOut, upStderr) => {

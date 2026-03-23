@@ -41,7 +41,7 @@ services:
       - projects:/data/projects
       - claude-config:/home/axy/.claude
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${COMPOSE_PROJECT_DIR:-.}:/opt/axy-src:ro
+      - ${COMPOSE_PROJECT_DIR:-.}:/opt/axy-src:ro  # Read-only mount for update detection
     ports:
       - "${SERVER_PORT:-3456}:3456"
 
