@@ -532,12 +532,14 @@ JWT_SECRET=dev-secret-change-in-production
 `
     await fs.writeFile(path.join(project.localPath, '.env'), envContent)
 
-    // Modify web package.json to use port 4457
+    // Modify web package.json to use port 4457 and bind to 0.0.0.0
     const webPkgPath = path.join(project.localPath, 'apps', 'web', 'package.json')
     try {
       const webPkg = JSON.parse(await fs.readFile(webPkgPath, 'utf-8'))
       if (webPkg.scripts?.dev) {
-        webPkg.scripts.dev = webPkg.scripts.dev.replace('--port 3457', '--port 4457')
+        webPkg.scripts.dev = webPkg.scripts.dev
+          .replace('--port 3457', '--port 4457')
+          .replace('--hostname 127.0.0.1', '--hostname 0.0.0.0')
       }
       await fs.writeFile(webPkgPath, JSON.stringify(webPkg, null, 2) + '\n')
     } catch { /* web package.json might not exist yet */ }
