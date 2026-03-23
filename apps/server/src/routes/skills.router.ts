@@ -7,6 +7,16 @@ import { catalogService } from '../services/catalog.service.js'
 const router = Router()
 router.use(authMiddleware)
 
+/** POST /api/skills/catalog/refresh — Force refresh catalog from GitHub */
+router.post('/catalog/refresh', async (_req, res) => {
+  try {
+    const result = await catalogService.refresh()
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
 /** GET /api/skills/catalog */
 router.get('/catalog', async (_req, res) => {
   try {
