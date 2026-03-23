@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useSkillStore } from '@/stores/skill.store'
+import { api } from '@/lib/api-client'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import type { Skill, CreateSkillInput } from '@axy/shared'
@@ -122,6 +123,7 @@ export default function SkillsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <RefreshCatalogButton />
           <Link
             href="/skills/marketplace"
             className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
@@ -385,5 +387,33 @@ export default function SkillsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function RefreshCatalogButton() {
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [result, setResult] = useState<string | null>(null)
+
+  return (
+    <button
+      onClick={async () => {
+        setIsRefreshing(true)
+        setResult(null)
+        try {
+          const data = await api.post<{ skills: number; agents: number }>('/api/skills/catalog/refresh', {})
+          setResult(`${data.skills} skills`)
+          setTimeout(() => setResult(null), 3000)
+        } catch { setResult('Failed') }
+        finally { setIsRefreshing(false) }
+      }}
+      disabled={isRefreshing}
+      className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--foreground)] disabled:opacity-50"
+      title="Refresh catalog from GitHub"
+    >
+      <svg className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      {result || (isRefreshing ? 'Refreshing...' : 'Refresh')}
+    </button>
   )
 }
