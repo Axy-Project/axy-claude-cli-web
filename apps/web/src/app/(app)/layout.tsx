@@ -128,11 +128,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const checkUpdateProgress = async () => {
       try {
         const res = await api.get<{ status: string; message: string; completedAt?: string }>('/api/health/update-status')
-        if (res.status !== 'idle') {
+        if (res.status !== 'idle' && res.status !== 'done') {
           setUpdateProgress(res)
-          if (res.status === 'done') {
-            setTimeout(() => setUpdateProgress(null), 5000)
-          }
         } else {
           setUpdateProgress(null)
         }
@@ -158,22 +155,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-[100dvh] overflow-hidden">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {updateProgress && updateProgress.status !== 'idle' && (
-          <div className="bg-[var(--primary)] px-4 py-2">
-            <div className="flex items-center justify-between text-xs font-medium text-white">
-              <div className="flex items-center gap-2">
-                {updateProgress.status !== 'done' && updateProgress.status !== 'error' && (
-                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                )}
-                {updateProgress.status === 'done' && <span className="text-green-200">Done!</span>}
-                <span>{updateProgress.message}</span>
-              </div>
+        {updateProgress && updateProgress.status !== 'idle' && updateProgress.status !== 'done' && (
+          <div className="px-4 py-2" style={{ background: 'linear-gradient(90deg, #1a1a2e, #16213e)' }}>
+            <div className="flex items-center gap-2 text-xs font-medium text-[#c9d1d9]">
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[#58a6ff] border-t-transparent" />
+              <span>{updateProgress.message}</span>
             </div>
-            {updateProgress.status !== 'done' && updateProgress.status !== 'error' && (
-              <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/20">
-                <div className="h-full animate-pulse rounded-full bg-white/60" style={{ width: '60%' }} />
-              </div>
-            )}
+            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-[#58a6ff] transition-all duration-1000" style={{ width: '60%', animation: 'pulse 2s ease-in-out infinite' }} />
+            </div>
           </div>
         )}
         {wsState.isReconnecting && !updateProgress && (
