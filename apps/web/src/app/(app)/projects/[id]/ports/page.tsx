@@ -169,8 +169,15 @@ export default function PortsPage() {
       : `${window.location.protocol}//${window.location.hostname}:3456`
     : ''
   const proxyUrl = (port: number, path = '/') => `${apiBase}/api/ports/${port}/proxy${path}`
-  // Direct URL for opening in new tab (bypasses double-proxy issues)
-  const directUrl = (port: number) => typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:${port}` : ''
+  // Direct URL — maps Docker dev ports to Nginx SSL ports for HTTPS access
+  const directUrl = (port: number) => {
+    if (typeof window === 'undefined') return ''
+    const { protocol, hostname } = window.location
+    // Map dev ports to Nginx SSL proxy ports (Docker 4456→Nginx 5456, 4457→5457)
+    const sslPortMap: Record<number, number> = { 4457: 5457, 4456: 5456 }
+    const mapped = sslPortMap[port] || port
+    return `${protocol}//${hostname}:${mapped}`
+  }
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -366,7 +373,7 @@ export default function PortsPage() {
                 )}
               </button>
               <a
-                href={proxyUrl(previewPort)}
+                href={directUrl(previewPort)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded p-1 text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]"
@@ -387,7 +394,7 @@ export default function PortsPage() {
             </div>
           </div>
           <iframe
-            src={proxyUrl(previewPort)}
+            src={directUrl(previewPort)}
             className={showConsole ? 'h-[60%] bg-white' : 'flex-1 bg-white'}
             title={`Preview localhost:${previewPort}`}
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"

@@ -132,30 +132,44 @@ router.use('/:port/proxy', (req: Request, res: Response) => {
     const contentType = proxyRes.headers['content-type'] || ''
     const isHtml = contentType.includes('text/html')
 
+    // Remove problematic headers from ALL responses
+    const cleanHeaders = (h: Record<string, any>) => {
+      delete h['transfer-encoding'] // Conflicts with content-length → 502 in Nginx
+      delete h['content-security-policy']
+      delete h['content-security-policy-report-only']
+      delete h['x-frame-options'] // Allow iframe embedding
+      return h
+    }
+
     if (isHtml) {
-      // Collect body, inject base tag + console script, then send
       const chunks: Buffer[] = []
       proxyRes.on('data', (chunk: Buffer) => chunks.push(chunk))
       proxyRes.on('end', () => {
         let body = Buffer.concat(chunks).toString()
-        // Inject <base> so all relative/absolute assets route through the proxy
-        const baseTag = `<base href="/api/ports/${port}/proxy/">`
-        const injection = baseTag + consoleInjectionScript
+        const proxyBase = `/api/ports/${port}/proxy`
+
+        // Rewrite absolute Next.js asset paths to go through proxy
+        body = body.replace(/(["'(=])\/_next\//g, `$1${proxyBase}/_next/`)
+        body = body.replace(/(["'(=])\/favicon/g, `$1${proxyBase}/favicon`)
+        body = body.replace(/(["'(=])\/logo/g, `$1${proxyBase}/logo`)
+
+        // Inject console capture script
         if (body.includes('<head>')) {
-          body = body.replace('<head>', '<head>' + injection)
+          body = body.replace('<head>', '<head>' + consoleInjectionScript)
         } else if (body.includes('<head ')) {
-          body = body.replace(/<head\s[^>]*>/, '$&' + injection)
+          body = body.replace(/<head\s[^>]*>/, '$&' + consoleInjectionScript)
         } else {
-          body = injection + body
+          body = consoleInjectionScript + body
         }
-        // Update content-length
-        const rewrittenHeaders = { ...proxyRes.headers }
+
+        const rewrittenHeaders: Record<string, string> = cleanHeaders({ ...proxyRes.headers })
         rewrittenHeaders['content-length'] = String(Buffer.byteLength(body))
         res.writeHead(proxyRes.statusCode || 200, rewrittenHeaders)
         res.end(body)
       })
     } else {
-      res.writeHead(proxyRes.statusCode || 200, proxyRes.headers)
+      const headers = cleanHeaders({ ...proxyRes.headers })
+      res.writeHead(proxyRes.statusCode || 200, headers)
       proxyRes.pipe(res, { end: true })
     }
   })

@@ -153,7 +153,7 @@ class PortService {
       if (log.length > 100) log.shift()
       // Try to detect the port from output
       const portMatch = text.match(/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d{4,5})/)
-      if (portMatch && !entry.port) {
+      if (portMatch) {
         entry.port = parseInt(portMatch[1], 10)
         console.log(`[Ports] Detected dev server port: ${entry.port}`)
       }
@@ -164,7 +164,7 @@ class PortService {
       log.push(text)
       if (log.length > 100) log.shift()
       const portMatch = text.match(/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d{4,5})/)
-      if (portMatch && !entry.port) {
+      if (portMatch) {
         entry.port = parseInt(portMatch[1], 10)
         console.log(`[Ports] Detected dev server port: ${entry.port}`)
       }

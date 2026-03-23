@@ -544,9 +544,26 @@ JWT_SECRET=dev-secret-change-in-production
       await fs.writeFile(webPkgPath, JSON.stringify(webPkg, null, 2) + '\n')
     } catch { /* web package.json might not exist yet */ }
 
-    // Install dependencies in background
+    // Create .env.local for the web app with dev API URL
+    const webDir = path.join(project.localPath, 'apps', 'web')
+    try {
+      await fs.mkdir(webDir, { recursive: true })
+      // Use HTTPS SSL port 5456 (Nginx) for the dev API — avoids mixed content
+      const webEnvContent = `# Dev API server — use Nginx SSL proxy port
+NEXT_PUBLIC_API_URL=https://\${window.location.hostname}:5456
+`
+      await fs.writeFile(path.join(webDir, '.env.local'), webEnvContent)
+    } catch { /* ignore */ }
+
+    // Install dependencies + rebuild native modules in background
     const { exec } = await import('child_process')
-    exec('(pnpm install --frozen-lockfile 2>&1 || pnpm install 2>&1) && pnpm rebuild better-sqlite3 2>&1', {
+    const installCmd = [
+      '(pnpm install --frozen-lockfile 2>&1 || pnpm install 2>&1)',
+      'pnpm rebuild better-sqlite3 2>&1',
+      // Also rebuild node-pty if present
+      'pnpm rebuild node-pty 2>&1 || true',
+    ].join(' && ')
+    exec(installCmd, {
       cwd: project.localPath,
       timeout: 300000,
       env: { ...process.env, HOME: '/home/axy' },
