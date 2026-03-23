@@ -115,7 +115,7 @@ export default function ProjectSettingsPage() {
   const handleExportConfig = useCallback(async () => {
     setIsExporting(true)
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || `http://${window.location.hostname}:3456`
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || ((window.location.port === '' || window.location.port === '80' || window.location.port === '443') ? `${window.location.protocol}//${window.location.hostname}` : `${window.location.protocol}//${window.location.hostname}:3456`)
       const token = localStorage.getItem('axy_token') || ''
       const res = await fetch(`${API_URL}/api/projects/${projectId}/export`, {
         headers: { Authorization: `Bearer ${token}` },

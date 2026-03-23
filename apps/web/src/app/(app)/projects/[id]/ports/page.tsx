@@ -162,7 +162,12 @@ export default function PortsPage() {
     }
   }
 
-  const apiBase = typeof window !== 'undefined' ? `http://${window.location.hostname}:3456` : ''
+  // Use same origin when behind reverse proxy (HTTPS), direct to :3456 only for local dev
+  const apiBase = typeof window !== 'undefined'
+    ? (window.location.port === '' || window.location.port === '80' || window.location.port === '443')
+      ? `${window.location.protocol}//${window.location.hostname}`
+      : `${window.location.protocol}//${window.location.hostname}:3456`
+    : ''
   const proxyUrl = (port: number, path = '/') => `${apiBase}/api/ports/${port}/proxy${path}`
 
   return (
