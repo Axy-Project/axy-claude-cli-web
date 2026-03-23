@@ -766,18 +766,19 @@ function DeveloperModeSection() {
     setIsCloning(true)
     setStatus('Creating Axy development project...')
     try {
-      // Create the project
       const project = await api.post<{ id: string }>('/api/projects', {
         name: 'axy-dev (self)',
         description: 'Axy development environment — develop Axy inside Axy',
       })
       setStatus('Cloning Axy repository...')
-      // Clone the repo
       await api.post('/api/git/clone', {
         repoUrl: 'https://github.com/Axy-Project/axy-claude-cli-web.git',
         projectId: project.id,
         branch: 'main',
       })
+      setStatus('Configuring dev ports (4456/4457)...')
+      // Configure alternate ports so it doesn't conflict with the running Axy
+      await api.post(`/api/projects/${project.id}/setup-dev-ports`, {})
       setStatus('Done! Redirecting...')
       setTimeout(() => router.push(`/projects/${project.id}`), 500)
     } catch (err) {

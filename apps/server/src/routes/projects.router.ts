@@ -492,6 +492,37 @@ router.get('/:id/my-access', async (req: AuthenticatedRequest, res) => {
   } catch (error) { res.status(500).json({ success: false, error: (error as Error).message }) }
 })
 
+/** POST /api/projects/:id/setup-dev-ports — Configure alternate ports for Axy dev project */
+router.post('/:id/setup-dev-ports', async (req: AuthenticatedRequest, res) => {
+  try {
+    const project = await projectService.getById(param(req, 'id'), req.userId!)
+    if (!project) { res.status(404).json({ success: false, error: 'Project not found' }); return }
+
+    // Write .env with alternate ports
+    const envContent = `# Axy Dev — alternate ports to avoid conflicts with running instance
+SERVER_PORT=4456
+HOST=0.0.0.0
+USE_SQLITE=true
+JWT_SECRET=dev-secret-change-in-production
+`
+    await fs.writeFile(path.join(project.localPath, '.env'), envContent)
+
+    // Modify web package.json to use port 4457
+    const webPkgPath = path.join(project.localPath, 'apps', 'web', 'package.json')
+    try {
+      const webPkg = JSON.parse(await fs.readFile(webPkgPath, 'utf-8'))
+      if (webPkg.scripts?.dev) {
+        webPkg.scripts.dev = webPkg.scripts.dev.replace('--port 3457', '--port 4457')
+      }
+      await fs.writeFile(webPkgPath, JSON.stringify(webPkg, null, 2) + '\n')
+    } catch { /* web package.json might not exist yet */ }
+
+    res.json({ success: true, message: 'Dev ports configured: server=4456, web=4457' })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
 /** GET /api/projects/:id/export-backup — Download full project backup as zip */
 router.get('/:id/export-backup', async (req: AuthenticatedRequest, res) => {
   try {
