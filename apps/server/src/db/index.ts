@@ -747,6 +747,36 @@ if (config.useSqlite) {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `)
+
+    // Auto-migrate existing PG databases — add columns that may not exist
+    const pgMigrations = [
+      { table: 'users', column: 'password_hash', sql: 'ALTER TABLE users ADD COLUMN password_hash TEXT' },
+      { table: 'users', column: 'is_admin', sql: 'ALTER TABLE users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT false' },
+      { table: 'users', column: 'is_approved', sql: 'ALTER TABLE users ADD COLUMN is_approved BOOLEAN NOT NULL DEFAULT true' },
+      { table: 'users', column: 'totp_secret_encrypted', sql: 'ALTER TABLE users ADD COLUMN totp_secret_encrypted TEXT' },
+      { table: 'users', column: 'totp_enabled', sql: 'ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN NOT NULL DEFAULT false' },
+      { table: 'sessions', column: 'cli_session_id', sql: 'ALTER TABLE sessions ADD COLUMN cli_session_id TEXT' },
+      { table: 'sessions', column: 'effort', sql: "ALTER TABLE sessions ADD COLUMN effort TEXT NOT NULL DEFAULT 'medium'" },
+      { table: 'sessions', column: 'is_pinned', sql: 'ALTER TABLE sessions ADD COLUMN is_pinned BOOLEAN DEFAULT false' },
+      { table: 'projects', column: 'auto_push_to_github', sql: 'ALTER TABLE projects ADD COLUMN auto_push_to_github BOOLEAN NOT NULL DEFAULT false' },
+      { table: 'projects', column: 'auto_deploy_on_change', sql: 'ALTER TABLE projects ADD COLUMN auto_deploy_on_change BOOLEAN NOT NULL DEFAULT false' },
+      { table: 'projects', column: 'github_account_id', sql: 'ALTER TABLE projects ADD COLUMN github_account_id UUID' },
+      { table: 'projects', column: 'claude_account_id', sql: 'ALTER TABLE projects ADD COLUMN claude_account_id UUID' },
+    ]
+
+    for (const m of pgMigrations) {
+      try {
+        const colCheck = await client.query(
+          `SELECT 1 FROM information_schema.columns WHERE table_name=$1 AND column_name=$2`,
+          [m.table, m.column]
+        )
+        if (colCheck.rowCount === 0) {
+          await client.query(m.sql)
+          console.log(`[DB] PG migrated: added ${m.column} to ${m.table}`)
+        }
+      } catch { /* column may already exist */ }
+    }
+
     console.log('[DB] PostgreSQL tables auto-created')
   } catch (err) {
     console.error('[DB] PostgreSQL auto-create error (tables may already exist):', (err as Error).message)
