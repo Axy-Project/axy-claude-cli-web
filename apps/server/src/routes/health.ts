@@ -1,6 +1,32 @@
 import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
+import { config } from '../config.js'
+
+// Persistent update status file (survives container restart)
+const UPDATE_STATUS_FILE = path.join(config.projectsDir, '.update-status.json')
+
+interface UpdateStatus {
+  status: 'idle' | 'pulling' | 'building' | 'restarting' | 'done' | 'error'
+  message: string
+  startedAt?: string
+  completedAt?: string
+}
+
+function writeUpdateStatus(status: UpdateStatus) {
+  try { fs.writeFileSync(UPDATE_STATUS_FILE, JSON.stringify(status)) } catch { /* ignore */ }
+}
+
+function readUpdateStatus(): UpdateStatus {
+  try {
+    const data = JSON.parse(fs.readFileSync(UPDATE_STATUS_FILE, 'utf-8'))
+    // Auto-clear old statuses (>5 min old)
+    if (data.startedAt && Date.now() - new Date(data.startedAt).getTime() > 5 * 60 * 1000) {
+      return { status: 'idle', message: '' }
+    }
+    return data
+  } catch { return { status: 'idle', message: '' } }
+}
 
 const router = Router()
 
@@ -44,6 +70,20 @@ router.get('/version', async (_req, res) => {
   }
 })
 
+/** GET /api/health/update-status — Check update progress (persists across restarts) */
+router.get('/update-status', (_req, res) => {
+  const status = readUpdateStatus()
+  res.json({ success: true, data: status })
+})
+
+// Clear update status on startup (if server restarted after update, it succeeded)
+{
+  const status = readUpdateStatus()
+  if (status.status === 'restarting' || status.status === 'pulling' || status.status === 'building') {
+    writeUpdateStatus({ status: 'done', message: 'Update completed — server restarted successfully', completedAt: new Date().toISOString() })
+  }
+}
+
 /** POST /api/health/update - Self-update via Docker */
 router.post('/update', async (_req, res) => {
   try {
@@ -59,6 +99,7 @@ router.post('/update', async (_req, res) => {
     let containerId = ''
     try { containerId = readFileSync('/etc/hostname', 'utf-8').trim() } catch { /* ignore */ }
 
+    writeUpdateStatus({ status: 'pulling', message: 'Update started — pulling changes...', startedAt: new Date().toISOString() })
     res.json({ success: true, message: 'Update started. Server will restart shortly.' })
 
     setTimeout(() => {
@@ -114,6 +155,7 @@ router.post('/update', async (_req, res) => {
             `-v "${hostWorkDir}:${hostWorkDir}" ` +
             `${sidecarImage} sh -c '${installDeps}${sidecarScript}'`
 
+          writeUpdateStatus({ status: 'restarting', message: `${isBuildFromSource ? 'Building from source' : 'Pulling images'}...`, startedAt: new Date().toISOString() })
           console.log('[Update] Launching sidecar update container')
           exec(updateCmd, { timeout: 30000 }, (upErr, upOut, upStderr) => {
             if (upErr) console.error('[Update] Sidecar launch failed:', upErr.message, upStderr)

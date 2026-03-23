@@ -492,6 +492,31 @@ router.get('/:id/my-access', async (req: AuthenticatedRequest, res) => {
   } catch (error) { res.status(500).json({ success: false, error: (error as Error).message }) }
 })
 
+/** POST /api/projects/:id/avatar — Upload project avatar image */
+router.post('/:id/avatar', upload.single('avatar'), async (req: AuthenticatedRequest, res) => {
+  try {
+    const project = await projectService.getById(param(req, 'id'), req.userId!)
+    if (!project) { res.status(404).json({ success: false, error: 'Project not found' }); return }
+    if (!req.file) { res.status(400).json({ success: false, error: 'No image file' }); return }
+
+    // Move file to a persistent location
+    const avatarsDir = path.join(config.projectsDir, '.avatars')
+    await fs.mkdir(avatarsDir, { recursive: true })
+    const ext = path.extname(req.file.originalname) || '.png'
+    const fileName = `project-${project.id}${ext}`
+    const destPath = path.join(avatarsDir, fileName)
+    await fs.rename(req.file.path, destPath)
+
+    // Store as a relative API URL
+    const avatarUrl = `/api/files/avatars/${fileName}`
+    await projectService.update(project.id, req.userId!, { avatarUrl } as any)
+
+    res.json({ success: true, data: { avatarUrl } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
 /** POST /api/projects/:id/setup-dev-ports — Configure alternate ports for Axy dev project */
 router.post('/:id/setup-dev-ports', async (req: AuthenticatedRequest, res) => {
   try {

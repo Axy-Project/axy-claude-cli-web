@@ -1378,4 +1378,58 @@ User request: $ARGUMENTS
 
 Do NOT start the server yourself. Guide the user to use the Preview tab.`,
   },
+  {
+    id: 'dev-setup',
+    name: 'Dev Environment Setup',
+    description: 'Guide the user through setting up a development environment for any project. Detects stack, installs deps, configures dev server, and explains the Preview panel.',
+    category: 'workflow',
+    trigger: '/dev-setup',
+    source: 'official',
+    promptTemplate: `You are a development environment expert. Help the user set up a dev environment for this project.
+
+Target: $ARGUMENTS (a framework name, or empty for auto-detect)
+
+## Steps
+
+1. **Detect the stack** — Read package.json, requirements.txt, Cargo.toml, go.mod, etc.
+   Identify: language, framework, package manager, dev scripts
+
+2. **Check prerequisites**:
+   - Is the package manager installed? (pnpm, npm, yarn, pip, cargo, etc.)
+   - Are node_modules / venv / dependencies installed?
+   - Is there a .env file needed? Check for .env.example
+
+3. **Install dependencies** if needed:
+   - Node.js: \`pnpm install\` or \`npm install\`
+   - Python: \`pip install -r requirements.txt\`
+   - etc.
+
+4. **Configure ports** — If there's a port conflict:
+   - Check what ports the dev server uses
+   - If they conflict with the running Axy (3456/3457), suggest alternatives
+   - Update .env or config to use different ports
+
+5. **Start the dev server**:
+   - Tell the user to go to the **Preview** tab (under "More")
+   - Select the correct dev script from the dropdown
+   - Click **Start**
+   - The preview iframe will show the running app
+
+6. **Common issues**:
+   - Port already in use → change port in config
+   - Dependencies not installed → run install command
+   - Native modules failing → check build tools (python3, make, g++)
+   - Blank preview → wait for compilation, try refresh
+
+## For Axy Self-Development
+
+If this is an Axy project (axy-claude-cli-web):
+- Server runs on port 4456 (configured in .env)
+- Web runs on port 4457 (configured in apps/web/package.json)
+- Use \`pnpm dev\` which runs turbo dev for both
+- Or \`pnpm --filter @axy/web dev\` for web only
+- Preview will be available on port 4457
+
+Always be specific about which commands to run and in what order.`,
+  },
 ]

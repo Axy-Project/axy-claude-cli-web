@@ -1,7 +1,11 @@
 import { Router } from 'express'
+import multer from 'multer'
+import path from 'path'
+import fs from 'fs/promises'
 import { authMiddleware, type AuthenticatedRequest } from '../middleware/auth.js'
 import { param } from '../middleware/params.js'
 import { orgService } from '../services/org.service.js'
+import { config } from '../config.js'
 
 const router = Router()
 router.use(authMiddleware)
@@ -43,6 +47,28 @@ router.post('/', async (req: AuthenticatedRequest, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message })
   }
+})
+
+const uploadTmp = path.join(config.projectsDir, '.tmp-uploads')
+const orgUpload = multer({ dest: uploadTmp, limits: { fileSize: 5 * 1024 * 1024 } })
+
+/** POST /api/orgs/:id/avatar — Upload organization avatar */
+router.post('/:id/avatar', authMiddleware, orgUpload.single('avatar'), async (req: AuthenticatedRequest, res) => {
+  try {
+    const role = await orgService.checkMembership(param(req, 'id'), req.userId!)
+    if (!role || !['owner', 'admin'].includes(role)) { res.status(403).json({ success: false, error: 'Insufficient permissions' }); return }
+    if (!req.file) { res.status(400).json({ success: false, error: 'No image file' }); return }
+
+    const avatarsDir = path.join(config.projectsDir, '.avatars')
+    await fs.mkdir(avatarsDir, { recursive: true })
+    const ext = path.extname(req.file.originalname) || '.png'
+    const fileName = `org-${param(req, 'id')}${ext}`
+    await fs.rename(req.file.path, path.join(avatarsDir, fileName))
+
+    const avatarUrl = `/api/files/avatars/${fileName}`
+    await orgService.update(param(req, 'id'), { avatarUrl })
+    res.json({ success: true, data: { avatarUrl } })
+  } catch (error) { res.status(500).json({ success: false, error: (error as Error).message }) }
 })
 
 /** PUT /api/orgs/:id */

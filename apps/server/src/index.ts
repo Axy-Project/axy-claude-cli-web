@@ -54,6 +54,11 @@ app.use(express.json({ limit: '50mb' }))
 app.use(requestLogger)
 app.use('/api', apiLimiter)
 
+// Static files — serve avatar images
+import { config as appConfig } from './config.js'
+import pathModule from 'path'
+app.use('/api/files/avatars', express.static(pathModule.join(appConfig.projectsDir, '.avatars')))
+
 // Routes
 app.use('/api/health', healthRouter)
 app.use('/api/setup', setupRouter)

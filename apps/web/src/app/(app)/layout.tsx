@@ -26,6 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [updateProgress, setUpdateProgress] = useState<{ status: string; message: string } | null>(null)
   const [wsState, setWsState] = useState<WsConnectionState>({
     connected: false,
     isReconnecting: false,
@@ -121,6 +122,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval)
   }, [isAuthenticated])
 
+  // Poll update progress (persists across page reloads)
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const checkUpdateProgress = async () => {
+      try {
+        const res = await api.get<{ status: string; message: string; completedAt?: string }>('/api/health/update-status')
+        if (res.status !== 'idle') {
+          setUpdateProgress(res)
+          if (res.status === 'done') {
+            setTimeout(() => setUpdateProgress(null), 5000)
+          }
+        } else {
+          setUpdateProgress(null)
+        }
+      } catch { /* server might be restarting */ }
+    }
+    checkUpdateProgress()
+    const interval = setInterval(checkUpdateProgress, 3000)
+    return () => clearInterval(interval)
+  }, [isAuthenticated])
+
   if (isLoading) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4">
@@ -136,7 +158,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-[100dvh] overflow-hidden">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {wsState.isReconnecting && (
+        {updateProgress && updateProgress.status !== 'idle' && (
+          <div className="bg-[var(--primary)] px-4 py-2">
+            <div className="flex items-center justify-between text-xs font-medium text-white">
+              <div className="flex items-center gap-2">
+                {updateProgress.status !== 'done' && updateProgress.status !== 'error' && (
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                )}
+                {updateProgress.status === 'done' && <span className="text-green-200">Done!</span>}
+                <span>{updateProgress.message}</span>
+              </div>
+            </div>
+            {updateProgress.status !== 'done' && updateProgress.status !== 'error' && (
+              <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/20">
+                <div className="h-full animate-pulse rounded-full bg-white/60" style={{ width: '60%' }} />
+              </div>
+            )}
+          </div>
+        )}
+        {wsState.isReconnecting && !updateProgress && (
           <div className="flex items-center justify-center gap-2 bg-[var(--primary-dim)] px-3 py-1.5 text-xs font-medium text-white">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white" />
             Reconnecting... (attempt {wsState.reconnectAttempt})
