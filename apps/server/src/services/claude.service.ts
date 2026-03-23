@@ -326,6 +326,13 @@ export class ClaudeService {
           }
 
           if (code !== 0 && !fullText) {
+            // If --resume failed, clear the stale CLI session ID so next message starts fresh
+            if (params.cliSessionId) {
+              import('./session.service.js').then(({ sessionService }) => {
+                sessionService.updateCliSessionId(params.sessionId, '').catch(() => {})
+              }).catch(() => {})
+              log.warn('Resume failed — cleared stale cliSessionId', { sessionId: params.sessionId })
+            }
             reject(new Error(stderrOutput || `Claude CLI exited with code ${code}`))
           } else {
             resolve()
