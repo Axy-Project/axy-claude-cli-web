@@ -546,7 +546,7 @@ JWT_SECRET=dev-secret-change-in-production
 
     // Install dependencies in background
     const { exec } = await import('child_process')
-    exec('pnpm install --frozen-lockfile 2>&1 || pnpm install 2>&1', {
+    exec('(pnpm install --frozen-lockfile 2>&1 || pnpm install 2>&1) && pnpm rebuild better-sqlite3 2>&1', {
       cwd: project.localPath,
       timeout: 300000,
       env: { ...process.env, HOME: '/home/axy' },

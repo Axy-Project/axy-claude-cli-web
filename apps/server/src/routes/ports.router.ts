@@ -133,18 +133,20 @@ router.use('/:port/proxy', (req: Request, res: Response) => {
     const isHtml = contentType.includes('text/html')
 
     if (isHtml) {
-      // Collect body, inject console script, then send
+      // Collect body, inject base tag + console script, then send
       const chunks: Buffer[] = []
       proxyRes.on('data', (chunk: Buffer) => chunks.push(chunk))
       proxyRes.on('end', () => {
         let body = Buffer.concat(chunks).toString()
-        // Inject script right after <head> or at the start
+        // Inject <base> so all relative/absolute assets route through the proxy
+        const baseTag = `<base href="/api/ports/${port}/proxy/">`
+        const injection = baseTag + consoleInjectionScript
         if (body.includes('<head>')) {
-          body = body.replace('<head>', '<head>' + consoleInjectionScript)
+          body = body.replace('<head>', '<head>' + injection)
         } else if (body.includes('<head ')) {
-          body = body.replace(/<head\s[^>]*>/, '$&' + consoleInjectionScript)
+          body = body.replace(/<head\s[^>]*>/, '$&' + injection)
         } else {
-          body = consoleInjectionScript + body
+          body = injection + body
         }
         // Update content-length
         const rewrittenHeaders = { ...proxyRes.headers }

@@ -140,7 +140,7 @@ class PortService {
       cwd: projectPath,
       env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
       stdio: ['ignore', 'pipe', 'pipe'],
-      detached: false,
+      detached: true, // Create process group so we can kill all children
     })
 
     const log: string[] = []
@@ -181,7 +181,12 @@ class PortService {
   stopDevServer(projectId: string): boolean {
     const entry = this.devProcesses.get(projectId)
     if (entry) {
-      entry.child.kill('SIGTERM')
+      // Kill entire process group (turbo + tsx + next children)
+      try {
+        if (entry.child.pid) process.kill(-entry.child.pid, 'SIGTERM')
+      } catch {
+        entry.child.kill('SIGTERM')
+      }
       this.devProcesses.delete(projectId)
       return true
     }
