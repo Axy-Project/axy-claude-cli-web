@@ -93,11 +93,19 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
       {/* Project header */}
       <div className="shrink-0">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[0.375rem]" style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}>
-            <span className="font-headline text-sm font-bold text-white">
-              {currentProject?.name?.charAt(0).toUpperCase() || '?'}
-            </span>
-          </div>
+          {currentProject?.avatarUrl ? (
+            <img
+              src={currentProject.avatarUrl}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-[0.375rem] object-cover ring-1 ring-[rgba(72,72,71,0.2)]"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-[0.375rem]" style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}>
+              <span className="font-headline text-sm font-bold text-white">
+                {currentProject?.name?.charAt(0).toUpperCase() || '?'}
+              </span>
+            </div>
+          )}
           <div className="min-w-0">
             <h1 className="truncate font-headline text-lg font-bold tracking-tight text-white md:text-xl">{currentProject?.name || 'Loading...'}</h1>
             {currentProject?.description && (

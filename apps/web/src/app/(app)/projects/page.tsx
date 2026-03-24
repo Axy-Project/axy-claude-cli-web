@@ -88,11 +88,27 @@ function ProjectCard({ project }: { project: Project }) {
       <div className="absolute inset-0 bg-gradient-to-br from-[#bd9dff]/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
       <div className="relative">
-        {/* Top row: name + badge */}
+        {/* Top row: avatar + name + badge */}
         <div className="mb-2 flex items-start justify-between gap-3">
-          <h3 className="font-headline text-lg font-bold leading-tight text-white">
-            {project.name}
-          </h3>
+          <div className="flex items-center gap-2.5 min-w-0">
+            {project.avatarUrl ? (
+              <img
+                src={project.avatarUrl}
+                alt=""
+                className="h-7 w-7 shrink-0 rounded-[0.375rem] object-cover ring-1 ring-[rgba(72,72,71,0.2)]"
+              />
+            ) : (
+              <div
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[0.375rem]"
+                style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+              >
+                <span className="text-xs font-bold text-white">{project.name?.charAt(0).toUpperCase() || '?'}</span>
+              </div>
+            )}
+            <h3 className="truncate font-headline text-lg font-bold leading-tight text-white">
+              {project.name}
+            </h3>
+          </div>
           <span className={`shrink-0 rounded-[0.25rem] px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${permissionColors[project.permissionMode] || permissionColors.default}`}>
             {permissionLabels[project.permissionMode] || project.permissionMode}
           </span>
