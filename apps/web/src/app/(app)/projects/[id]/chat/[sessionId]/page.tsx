@@ -901,6 +901,77 @@ function StreamingAssistantView() {
 }
 
 // ────────────────────────────────────────────────────────────
+// Engine Model Selector (badge-style, opens upward)
+// ────────────────────────────────────────────────────────────
+function EngineModelSelector({
+  currentModel,
+  modelShort,
+  onSelect,
+}: {
+  currentModel: string
+  modelShort: string
+  onSelect: (modelId: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 rounded-[0.375rem] px-3 py-1.5 font-label text-[11px] font-semibold uppercase tracking-[0.12em] text-[#adaaaa] transition-colors hover:text-white"
+        style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}
+      >
+        <span className="h-2 w-2 rounded-full bg-[#3bfb8c]" />
+        ENGINE: {modelShort.toUpperCase().replace(/ /g, '_')}
+        <svg className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute bottom-full right-0 z-50 mb-1.5 min-w-[220px] rounded-[0.75rem] py-1.5 shadow-[0_-20px_40px_-10px_rgba(0,0,0,0.3)]" style={{ background: '#262626', border: '1px solid rgba(72,72,71,0.2)' }}>
+          <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#767575]">Select Model</div>
+          {MODELS.map((model) => {
+            const tier = TIER_COLORS[model.tier] || TIER_COLORS.standard
+            const isActive = model.id === currentModel
+            return (
+              <button
+                key={model.id}
+                type="button"
+                onClick={() => { onSelect(model.id); setOpen(false) }}
+                className={`flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-[12px] transition-colors ${
+                  isActive ? 'bg-[#bd9dff]/10 text-[#bd9dff]' : 'text-[#adaaaa] hover:bg-[#1a1a1a] hover:text-white'
+                }`}
+              >
+                <span className={`h-2 w-2 shrink-0 rounded-full ${tier.dot}`} />
+                <span className="flex-1 font-medium">{model.name}</span>
+                <span className={`rounded px-1.5 py-0.5 text-[9px] font-medium ${tier.bg} ${tier.text}`}>{model.tier}</span>
+                {isActive && (
+                  <svg className="h-3.5 w-3.5 shrink-0 text-[#bd9dff]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ────────────────────────────────────────────────────────────
 // Model Selector Dropdown
 // ────────────────────────────────────────────────────────────
 const TIER_COLORS: Record<string, { dot: string; bg: string; text: string }> = {
@@ -1993,14 +2064,11 @@ export default function ChatSessionPage() {
           isVisible={!!activeAgent}
         />
 
-        {/* Engine badge + shortcut — right-aligned, hidden on mobile */}
+        {/* Engine badge (model selector) + shortcut — right-aligned, hidden on mobile */}
         <div className="hidden items-center justify-end gap-2 pb-2 md:flex">
-          <span className="flex items-center gap-2 rounded-[0.375rem] px-3 py-1.5 font-label text-[11px] font-semibold uppercase tracking-[0.12em] text-[#adaaaa]" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}>
-            <span className="h-2 w-2 rounded-full bg-[#3bfb8c]" />
-            ENGINE: {modelShort.toUpperCase().replace(/ /g, '_')}
-          </span>
+          <EngineModelSelector currentModel={currentSession?.model || 'claude-sonnet-4-6'} modelShort={modelShort} onSelect={handleModelChange} />
           <span className="rounded-[0.375rem] px-3 py-1.5 font-label text-[11px] font-semibold uppercase tracking-[0.12em] text-[#adaaaa]" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}>
-            CMD + ENTER TO SEND
+            {typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent) ? 'CMD' : 'CTRL'} + ENTER TO SEND
           </span>
         </div>
 
