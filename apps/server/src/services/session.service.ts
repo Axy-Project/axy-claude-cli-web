@@ -3,6 +3,26 @@ import { db, schema } from '../db/index.js'
 import type { CreateSessionInput } from '@axy/shared'
 
 export class SessionService {
+  /** Get recent sessions across all projects for a user, with project info */
+  async listRecent(userId: string, limit = 15) {
+    const rows = await db
+      .select({
+        id: schema.sessions.id,
+        projectId: schema.sessions.projectId,
+        title: schema.sessions.title,
+        model: schema.sessions.model,
+        updatedAt: schema.sessions.updatedAt,
+        projectName: schema.projects.name,
+        projectAvatarUrl: schema.projects.avatarUrl,
+      })
+      .from(schema.sessions)
+      .innerJoin(schema.projects, eq(schema.sessions.projectId, schema.projects.id))
+      .where(eq(schema.sessions.userId, userId))
+      .orderBy(desc(schema.sessions.updatedAt))
+      .limit(limit)
+    return rows
+  }
+
   async listByProject(projectId: string, userId: string) {
     return db
       .select()

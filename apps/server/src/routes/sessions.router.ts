@@ -8,6 +8,17 @@ import { claudeService } from '../services/claude.service.js'
 const router = Router()
 router.use(authMiddleware)
 
+/** GET /api/sessions/recent - Recent sessions across all projects */
+router.get('/recent', async (req: AuthenticatedRequest, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 15
+    const sessions = await sessionService.listRecent(req.userId!, limit)
+    res.json({ success: true, data: sessions })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
 /** GET /api/projects/:projectId/sessions */
 router.get('/project/:projectId', async (req: AuthenticatedRequest, res) => {
   try {
