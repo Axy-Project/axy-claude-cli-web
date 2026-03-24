@@ -531,7 +531,7 @@ const markdownComponents: Components = {
 
 function MarkdownContent({ content }: { content: string }) {
   return (
-    <div className="prose prose-base dark:prose-invert max-w-none prose-headings:font-headline prose-headings:font-semibold prose-headings:text-[#bd9dff] prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-h4:text-sm prose-p:text-[16px] prose-p:leading-[1.7] prose-p:text-[#e0e0e0] prose-strong:text-white prose-em:text-[#adaaaa] prose-a:text-[#bd9dff] prose-a:underline prose-li:text-[16px] prose-li:leading-[1.7] prose-li:text-[#e0e0e0] prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 prose-table:m-0 prose-blockquote:border-[#bd9dff]/30 prose-blockquote:text-[#adaaaa]">
+    <div className="prose prose-base dark:prose-invert max-w-none overflow-hidden break-words prose-headings:font-headline prose-headings:font-semibold prose-headings:text-[#bd9dff] prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-h4:text-sm prose-p:text-[16px] prose-p:leading-[1.7] prose-p:text-[#e0e0e0] prose-strong:text-white prose-em:text-[#adaaaa] prose-a:text-[#bd9dff] prose-a:underline prose-li:text-[16px] prose-li:leading-[1.7] prose-li:text-[#e0e0e0] prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 prose-table:m-0 prose-blockquote:border-[#bd9dff]/30 prose-blockquote:text-[#adaaaa]">
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} components={markdownComponents}>{content}</ReactMarkdown>
     </div>
   )
@@ -555,8 +555,8 @@ const UserMessageView = memo(function UserMessageView({ msg }: { msg: Message })
         </span>
       </div>
       {/* Message bubble */}
-      <div className="rounded-[0.75rem] px-7 py-6" style={{ background: 'rgba(26,26,26,0.6)', border: '1px solid rgba(72,72,71,0.12)', borderLeft: '3px solid rgba(189,157,255,0.3)' }}>
-        <pre className="whitespace-pre-wrap font-sans text-[16px] leading-[1.7] text-[#e0e0e0]">
+      <div className="overflow-hidden rounded-[0.75rem] px-4 py-4 md:px-7 md:py-6" style={{ background: 'rgba(26,26,26,0.6)', border: '1px solid rgba(72,72,71,0.12)', borderLeft: '3px solid rgba(189,157,255,0.3)' }}>
+        <pre className="whitespace-pre-wrap break-words font-sans text-[15px] leading-[1.7] text-[#e0e0e0] md:text-[16px]">
           {text}
         </pre>
         {images.length > 0 && (
@@ -1993,8 +1993,8 @@ export default function ChatSessionPage() {
           isVisible={!!activeAgent}
         />
 
-        {/* Engine badge + shortcut — right-aligned like reference */}
-        <div className="flex items-center justify-end gap-2 pb-2">
+        {/* Engine badge + shortcut — right-aligned, hidden on mobile */}
+        <div className="hidden items-center justify-end gap-2 pb-2 md:flex">
           <span className="flex items-center gap-2 rounded-[0.375rem] px-3 py-1.5 font-label text-[11px] font-semibold uppercase tracking-[0.12em] text-[#adaaaa]" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}>
             <span className="h-2 w-2 rounded-full bg-[#3bfb8c]" />
             ENGINE: {modelShort.toUpperCase().replace(/ /g, '_')}

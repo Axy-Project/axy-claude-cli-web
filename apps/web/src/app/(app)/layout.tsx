@@ -242,7 +242,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <Topbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="custom-scrollbar flex-1 overflow-auto p-4 md:p-8">
+        <main className="custom-scrollbar min-h-0 flex-1 overflow-auto p-3 md:p-8">
           {children}
         </main>
       </div>

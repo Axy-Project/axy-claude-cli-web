@@ -402,7 +402,7 @@ export const ChatInput = memo(function ChatInput({
       )}
 
       {/* Main input container — single glass box */}
-      <div className="flex items-center gap-3 rounded-[0.75rem] px-4 py-3" style={{ background: 'rgba(26,26,26,0.6)', border: '1px solid rgba(189,157,255,0.15)', backdropFilter: 'blur(20px)' }}>
+      <div className="flex items-center gap-2 rounded-[0.75rem] px-3 py-2.5 md:gap-3 md:px-4 md:py-3" style={{ background: 'rgba(26,26,26,0.6)', border: '1px solid rgba(189,157,255,0.15)', backdropFilter: 'blur(20px)' }}>
         {/* > prompt symbol */}
         <span className="hidden shrink-0 font-mono text-lg font-bold text-[#bd9dff] md:inline">&#10095;</span>
 
@@ -463,20 +463,20 @@ export const ChatInput = memo(function ChatInput({
                 </svg>
               </button>
             )}
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded p-1 text-[#767575] transition-colors hover:text-white" title="Attach files">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded p-1.5 text-[#767575] transition-colors hover:text-white" title="Attach files">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
               </svg>
             </button>
           </div>
-          <input ref={fileInputRef} type="file" accept="image/*,.pdf,.txt,.md,.json,.csv" multiple className="hidden" onChange={handleFileSelect} />
+          <input ref={fileInputRef} type="file" accept="image/*,.pdf,.txt,.md,.json,.csv" multiple className="sr-only" onChange={handleFileSelect} />
         </div>
 
         {/* Send button — rounded square, gradient */}
         <button
           onClick={handleSend}
           disabled={!input.trim() && attachedImages.length === 0}
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[0.625rem] transition-all hover:brightness-110 disabled:opacity-25"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.625rem] transition-all hover:brightness-110 disabled:opacity-25 md:h-12 md:w-12"
           style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#2a0066" strokeWidth={3}>

@@ -95,7 +95,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between px-6" style={{ background: 'rgba(14,14,14,0.6)', backdropFilter: 'blur(20px)' }}>
+    <header className="relative z-30 flex h-14 shrink-0 items-center justify-between px-4 md:px-6" style={{ background: 'rgba(14,14,14,0.6)', backdropFilter: 'blur(20px)' }}>
       {/* Left */}
       <div className="flex items-center gap-3">
         <button onClick={onMenuToggle} className="rounded-md p-1.5 text-[var(--muted-foreground)] hover:text-white md:hidden">
@@ -128,7 +128,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
             <>
               <div className="fixed inset-0 z-40" onClick={() => setQuickAccessOpen(false)} />
               <div
-                className="absolute right-0 top-full z-50 mt-2 w-[calc(100vw-2rem)] max-w-80 rounded-[0.75rem] shadow-[0_40px_60px_-10px_rgba(255,255,255,0.04)] sm:w-80"
+                className="fixed inset-x-3 top-16 z-50 max-h-[80vh] rounded-[0.75rem] shadow-[0_40px_60px_-10px_rgba(255,255,255,0.04)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 sm:max-h-[420px]"
                 style={{ background: 'var(--surface-highest)', border: '1px solid rgba(72,72,71,0.2)' }}
               >
                 {/* Header */}
