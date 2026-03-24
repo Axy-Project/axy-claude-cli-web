@@ -128,7 +128,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
             <>
               <div className="fixed inset-0 z-40" onClick={() => setQuickAccessOpen(false)} />
               <div
-                className="absolute right-0 top-full z-50 mt-2 w-80 rounded-[0.75rem] shadow-[0_40px_60px_-10px_rgba(255,255,255,0.04)]"
+                className="absolute right-0 top-full z-50 mt-2 w-[calc(100vw-2rem)] max-w-80 rounded-[0.75rem] shadow-[0_40px_60px_-10px_rgba(255,255,255,0.04)] sm:w-80"
                 style={{ background: 'var(--surface-highest)', border: '1px solid rgba(72,72,71,0.2)' }}
               >
                 {/* Header */}

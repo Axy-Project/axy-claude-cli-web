@@ -24,6 +24,7 @@ import {
   Globe,
   Settings,
   Link2,
+  ChevronDown,
 } from 'lucide-react'
 
 const primaryTabs = [
@@ -48,18 +49,23 @@ const moreTabs = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
+const allTabs = [...primaryTabs, ...moreTabs]
+
 export default function ProjectLayout({ children }: { children: React.ReactNode }) {
   const params = useParams()
   const pathname = usePathname()
   const { currentProject, fetchProject } = useProjectStore()
   const projectId = params.id as string
   const [moreOpen, setMoreOpen] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const moreRef = useRef<HTMLDivElement>(null)
+  const mobileNavRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchProject(projectId)
   }, [projectId, fetchProject])
 
+  // Close desktop "More" dropdown on outside click
   useEffect(() => {
     if (!moreOpen) return
 
@@ -79,6 +85,31 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
     }
   }, [moreOpen])
 
+  // Close mobile nav on outside click
+  useEffect(() => {
+    if (!mobileNavOpen) return
+
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node
+      if (mobileNavRef.current && !mobileNavRef.current.contains(target)) {
+        setMobileNavOpen(false)
+      }
+    }
+
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside)
+    }, 0)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [mobileNavOpen])
+
+  // Close mobile nav on route change
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [pathname])
+
   function isActive(href: string) {
     if (href === '') {
       return pathname === `/projects/${projectId}`
@@ -87,6 +118,10 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
   }
 
   const isMoreItemActive = moreTabs.some((item) => isActive(item.href))
+
+  // Find the currently active tab for the mobile selector
+  const activeTab = allTabs.find((item) => isActive(item.href)) || primaryTabs[0]
+  const ActiveIcon = activeTab.icon
 
   return (
     <div className="flex h-full flex-col">
@@ -115,9 +150,87 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
         </div>
       </div>
 
-      {/* Project tabs */}
-      <div className="relative mt-4 shrink-0" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
-        <nav className="-mx-3 flex items-center gap-0 overflow-x-auto px-3 md:-mx-0 md:gap-0 md:px-0 scrollbar-none scroll-fade-right">
+      {/* ── Mobile: vertical dropdown nav ── */}
+      <div className="relative mt-3 shrink-0 md:hidden" ref={mobileNavRef}>
+        <button
+          onClick={() => setMobileNavOpen(!mobileNavOpen)}
+          className="flex w-full items-center gap-2.5 rounded-[0.5rem] px-3.5 py-2.5 text-sm font-medium text-white transition-colors"
+          style={{ background: 'var(--surface-mid)', border: '1px solid rgba(72,72,71,0.2)' }}
+        >
+          <ActiveIcon className="h-4 w-4 text-[#bd9dff]" />
+          <span className="flex-1 text-left">{activeTab.label}</span>
+          <ChevronDown className={cn('h-4 w-4 text-[var(--muted-foreground)] transition-transform duration-200', mobileNavOpen && 'rotate-180')} />
+        </button>
+
+        {mobileNavOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setMobileNavOpen(false)} />
+            <div
+              className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-[70vh] overflow-y-auto rounded-[0.75rem] py-1.5 shadow-[0_40px_60px_-10px_rgba(255,255,255,0.04)]"
+              style={{ background: '#262626', border: '1px solid rgba(72,72,71,0.2)' }}
+            >
+              {/* Primary tabs */}
+              <div className="px-3 pb-1 pt-2">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">Main</span>
+              </div>
+              {primaryTabs.map((item) => {
+                const href = `/projects/${projectId}${item.href}`
+                const active = isActive(item.href)
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.href}
+                    href={href}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors',
+                      active
+                        ? 'bg-[#bd9dff]/10 text-[#bd9dff]'
+                        : 'text-[#adaaaa] hover:bg-[#1a1a1a] hover:text-white'
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                    {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#bd9dff]" />}
+                  </Link>
+                )
+              })}
+
+              {/* Separator */}
+              <div className="mx-3 my-1.5" style={{ borderTop: '1px solid rgba(72,72,71,0.15)' }} />
+
+              {/* Secondary tabs */}
+              <div className="px-3 pb-1 pt-1">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">More</span>
+              </div>
+              {moreTabs.map((item) => {
+                const href = `/projects/${projectId}${item.href}`
+                const active = isActive(item.href)
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.href}
+                    href={href}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors',
+                      active
+                        ? 'bg-[#bd9dff]/10 text-[#bd9dff]'
+                        : 'text-[#adaaaa] hover:bg-[#1a1a1a] hover:text-white'
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                    {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#bd9dff]" />}
+                  </Link>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Desktop: horizontal tabs (unchanged) ── */}
+      <div className="relative mt-4 hidden shrink-0 md:block" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
+        <nav className="flex items-center gap-0">
           {primaryTabs.map((item) => {
             const href = `/projects/${projectId}${item.href}`
             const active = isActive(item.href)
@@ -127,7 +240,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                 key={item.href}
                 href={href}
                 className={cn(
-                  'relative flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors md:px-4 md:py-3 md:text-[13px]',
+                  'relative flex shrink-0 items-center gap-1.5 px-4 py-3 text-[13px] font-medium transition-colors',
                   active
                     ? 'text-[#bd9dff]'
                     : 'text-[#adaaaa] hover:text-white'
@@ -147,14 +260,14 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
             <button
               onClick={() => setMoreOpen((prev) => !prev)}
               className={cn(
-                'relative flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors md:px-4 md:py-3 md:text-[13px]',
+                'relative flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium transition-colors',
                 isMoreItemActive
                   ? 'text-[#bd9dff]'
                   : 'text-[#adaaaa] hover:text-white'
               )}
             >
               <MoreHorizontal className="h-4 w-4" />
-              <span className="hidden sm:inline">More</span>
+              More
               {isMoreItemActive && (
                 <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-[#bd9dff]" />
               )}
