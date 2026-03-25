@@ -21,6 +21,7 @@ interface ChatInputProps {
   sessionId: string
   isStreaming: boolean
   isListening?: boolean
+  queueSize?: number
   skillCommands: SlashCommandDef[]
   projectFiles: FileNode[]
   onSend: (payload: ChatInputSendPayload) => void
@@ -61,6 +62,7 @@ function flattenFiles(nodes: FileNode[]): { name: string; path: string }[] {
 export const ChatInput = memo(function ChatInput({
   sessionId,
   isStreaming,
+  queueSize = 0,
   skillCommands,
   projectFiles,
   onSend,
@@ -485,12 +487,21 @@ export const ChatInput = memo(function ChatInput({
         </button>
       </div>
 
-      {/* Hints below */}
-      <div className="mt-2 hidden items-center gap-4 px-4 text-[11px] text-[#767575]/60 sm:flex">
-        <span>@ to mention files</span>
-        <span>Paste/attach images or text files</span>
-        {voiceSupported && <span>Mic for voice input</span>}
-        <span>Arrow Up/Down for history</span>
+      {/* Queue indicator + Hints below */}
+      <div className="mt-2 flex items-center gap-4 px-4 text-[11px] text-[#767575]/60">
+        {queueSize > 0 && (
+          <span className="flex items-center gap-1.5 rounded-full bg-[#bd9dff]/10 px-2.5 py-0.5 text-[#bd9dff]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#bd9dff]" />
+            {queueSize} message{queueSize > 1 ? 's' : ''} in queue
+          </span>
+        )}
+        {isStreaming && queueSize === 0 && (
+          <span className="text-[#767575]/80">Messages sent now will be queued</span>
+        )}
+        <span className="hidden sm:inline">@ to mention files</span>
+        <span className="hidden sm:inline">Paste/attach images or text files</span>
+        {voiceSupported && <span className="hidden sm:inline">Mic for voice input</span>}
+        <span className="hidden sm:inline">Arrow Up/Down for history</span>
       </div>
     </div>
   )

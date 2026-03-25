@@ -120,7 +120,8 @@ router.post('/send', async (req: AuthenticatedRequest, res) => {
       effort: effort as 'low' | 'medium' | 'high' | 'max' | undefined,
     })
 
-    res.json({ success: true, data: { streaming: true } })
+    const queueSize = claudeService.getQueueSize(sessionId)
+    res.json({ success: true, data: { streaming: true, queued: queueSize > 0, queueSize } })
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message })
   }

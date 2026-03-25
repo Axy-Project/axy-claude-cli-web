@@ -85,6 +85,8 @@ const log = logger.child('claude')
 
 export class ClaudeService {
   private activeProcesses = new Map<string, ChildProcess>()
+  /** Per-session message queue — messages wait here while a process is active */
+  private messageQueues = new Map<string, ChatParams[]>()
 
   /** Broadcast event to WS clients AND buffer it for replay */
   private emit(sessionId: string, type: string, data: unknown): void {
@@ -92,16 +94,52 @@ export class ClaudeService {
     broadcaster.toSession(sessionId, type as never, data as never)
   }
 
+  /** Queue size for a session */
+  getQueueSize(sessionId: string): number {
+    return this.messageQueues.get(sessionId)?.length ?? 0
+  }
+
+  /** Process the next queued message for a session (if any) */
+  private processQueue(sessionId: string): void {
+    const queue = this.messageQueues.get(sessionId)
+    if (!queue || queue.length === 0) {
+      this.messageQueues.delete(sessionId)
+      return
+    }
+    const next = queue.shift()!
+    if (queue.length === 0) this.messageQueues.delete(sessionId)
+    log.info('Processing queued message', { sessionId, remaining: queue.length })
+
+    // Notify client that queue item is being processed
+    broadcaster.toSession(sessionId, 'claude:queue-update' as never, {
+      sessionId,
+      queueSize: queue.length,
+    } as never)
+
+    // Fire-and-forget — sendMessage handles its own errors
+    this.sendMessage(next).catch((err) => {
+      log.error('Queued message failed', { sessionId, error: (err as Error).message })
+    })
+  }
+
   async sendMessage(params: ChatParams): Promise<void> {
     const messageId = crypto.randomUUID()
     const startTime = Date.now()
 
-    // Kill any existing process for this session
+    // If a process is already running for this session, queue the message
     const existing = this.activeProcesses.get(params.sessionId)
     if (existing) {
-      log.info('Killing existing process', { sessionId: params.sessionId })
-      existing.kill('SIGTERM')
-      this.activeProcesses.delete(params.sessionId)
+      const queue = this.messageQueues.get(params.sessionId) || []
+      queue.push(params)
+      this.messageQueues.set(params.sessionId, queue)
+      log.info('Message queued', { sessionId: params.sessionId, queueSize: queue.length })
+
+      // Notify client about queue update
+      broadcaster.toSession(params.sessionId, 'claude:queue-update' as never, {
+        sessionId: params.sessionId,
+        queueSize: queue.length,
+      } as never)
+      return
     }
 
     // Start buffering events for this session
@@ -440,6 +478,8 @@ export class ClaudeService {
       if (mcpConfigPath) {
         try { await fs.unlink(mcpConfigPath) } catch { /* ignore */ }
       }
+      // Process next queued message (if any)
+      this.processQueue(params.sessionId)
     }
   }
 
@@ -558,10 +598,16 @@ export class ClaudeService {
   }
 
   stopSession(sessionId: string): boolean {
+    // Clear any queued messages when user explicitly stops
+    this.messageQueues.delete(sessionId)
     const child = this.activeProcesses.get(sessionId)
     if (child) {
       child.kill('SIGTERM')
       this.activeProcesses.delete(sessionId)
+      broadcaster.toSession(sessionId, 'claude:queue-update' as never, {
+        sessionId,
+        queueSize: 0,
+      } as never)
       return true
     }
     return false

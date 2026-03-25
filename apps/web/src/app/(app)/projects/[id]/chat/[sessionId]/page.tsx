@@ -30,6 +30,8 @@ import { useAgentStore } from '@/stores/agent.store'
 import { useSkillStore } from '@/stores/skill.store'
 import { ChatInput, type ChatInputSendPayload } from '@/components/chat/chat-input'
 import { SplitTerminal } from '@/components/terminal/split-terminal'
+import { MultiChatPanel } from '@/components/chat/multi-chat-panel'
+import { MultiChatPicker } from '@/components/chat/multi-chat-picker'
 
 // ────────────────────────────────────────────────────────────
 // Collapsible Section
@@ -1282,6 +1284,7 @@ export default function ChatSessionPage() {
     checkAndReplayStream,
     budgetWarning,
     dismissBudgetWarning,
+    queueSizes,
   } = useChatStore()
 
   const [parentSessionTitle, setParentSessionTitle] = useState<string | null>(null)
@@ -1819,6 +1822,7 @@ export default function ChatSessionPage() {
   const modelShort = (currentSession?.model || 'claude-sonnet-4-6').replace('claude-', '').replace(/-\d+$/, '')
 
   return (
+    <MultiChatPanel projectId={projectId} primarySessionId={sessionId}>
     <SplitTerminal projectId={projectId}>
     <div className="flex h-full gap-0 overflow-hidden">
       {/* LEFT: Chat area */}
@@ -1863,6 +1867,10 @@ export default function ChatSessionPage() {
               <span className="hidden sm:inline">Stop</span>
             </button>
           )}
+          {/* MultiChat split — desktop only */}
+          <span className="hidden md:inline-flex">
+            <MultiChatPicker projectId={projectId} currentSessionId={sessionId} />
+          </span>
           <button
             onClick={() => setShowMetrics(!showMetrics)}
             className="rounded-[0.375rem] p-1.5 text-[#adaaaa] transition-colors hover:text-white"
@@ -2075,6 +2083,7 @@ export default function ChatSessionPage() {
         <ChatInput
           sessionId={sessionId}
           isStreaming={isStreaming}
+          queueSize={queueSizes[sessionId] || 0}
           skillCommands={skillCommands}
           projectFiles={projectFiles}
           onSend={handleChatInputSend}
@@ -2243,5 +2252,6 @@ export default function ChatSessionPage() {
       )}
     </div>
     </SplitTerminal>
+    </MultiChatPanel>
   )
 }

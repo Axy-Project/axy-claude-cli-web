@@ -34,6 +34,7 @@ const primaryTabs = [
   { href: '/terminal', label: 'Terminal', icon: Terminal },
   { href: '/git', label: 'Git', icon: GitBranch },
   { href: '/deploy', label: 'Deploy', icon: Rocket },
+  { href: '/ports', label: 'Preview', icon: Globe },
 ]
 
 const moreTabs = [
@@ -45,7 +46,6 @@ const moreTabs = [
   { href: '/tasks', label: 'Tasks', icon: ListTodo },
   { href: '/snapshots', label: 'Snapshots', icon: Camera },
   { href: '/cross-ref', label: 'Cross-Ref', icon: Link2 },
-  { href: '/ports', label: 'Preview', icon: Globe },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

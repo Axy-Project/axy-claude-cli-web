@@ -117,6 +117,10 @@ export interface WsServerEvents {
     durationMs?: number
     error?: string
   }
+  'claude:queue-update': {
+    sessionId: string
+    queueSize: number
+  }
 }
 
 export interface StreamChunk {

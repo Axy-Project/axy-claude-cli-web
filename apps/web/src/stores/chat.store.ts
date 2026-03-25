@@ -63,6 +63,9 @@ interface ChatState {
   budgetWarning: BudgetWarning | null
   dismissBudgetWarning: () => void
 
+  /** Per-session message queue size (from server) */
+  queueSizes: Record<string, number>
+
   setSession: (session: Session) => void
   updateSessionModel: (sessionId: string, model: string) => Promise<void>
   fetchMessages: (sessionId: string) => Promise<void>
@@ -113,6 +116,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   thinkingStartedAt: null,
   hasMore: false,
   budgetWarning: null,
+  queueSizes: {},
 
   dismissBudgetWarning: () => set({ budgetWarning: null }),
 
@@ -145,6 +149,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       thinkingStartedAt: null,
       hasMore: false,
       budgetWarning: null,
+      queueSizes: {},
     })
   },
 
@@ -173,10 +178,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   sendMessage: async (sessionId, content, agentId?, images?, mode?, effort?) => {
-    // Set streaming state for THIS session
+    // Set streaming state for THIS session (only if not already streaming —
+    // if already streaming, server will queue the message)
     set((state) => {
       const current = state._streams[sessionId] || emptyStreamState()
-      if (current.isStreaming) return {} // Already streaming, don't reset
+      if (current.isStreaming) return {} // Already streaming — server will queue
       return patchStream(state, sessionId, () => ({
         isStreaming: true,
         content: '',
@@ -235,7 +241,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   stopGeneration: async (sessionId) => {
     await api.post('/api/chat/stop', { sessionId })
-    set((state) => patchStream(state, sessionId, () => ({ isStreaming: false })))
+    set((state) => ({
+      ...patchStream(state, sessionId, () => ({ isStreaming: false })),
+      queueSizes: { ...state.queueSizes, [sessionId]: 0 },
+    }))
   },
 
   checkAndReplayStream: async (sessionId) => {
@@ -493,6 +502,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Budget warning
       wsClient.on('budget:warning', (data) => {
         set({ budgetWarning: data })
+      }),
+
+      // Queue update
+      wsClient.on('claude:queue-update', (data) => {
+        const { sessionId, queueSize } = data
+        set((state) => ({
+          queueSizes: { ...state.queueSizes, [sessionId]: queueSize },
+        }))
       }),
 
       // Stream error
