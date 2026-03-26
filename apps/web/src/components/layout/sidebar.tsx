@@ -33,7 +33,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [version, setVersion] = useState<string | null>(null)
   const [userOrgs, setUserOrgs] = useState<SimpleOrg[]>([])
-  const [teamChatExpanded, setTeamChatExpanded] = useState(false)
+  const isOnTeamChat = pathname.includes('/org/') && pathname.includes('/chat')
+  const [teamChatExpanded, setTeamChatExpanded] = useState(isOnTeamChat)
   const unreadCount = useNotificationStore((s) => s.unreadCount)
 
   useEffect(() => {

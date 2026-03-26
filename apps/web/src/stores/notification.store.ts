@@ -100,7 +100,26 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   initWsListener: () => {
     const unsub = wsClient.on('notification:new', (data) => {
       get().addNotification(data as AppNotification)
+      // Browser notification when tab is not focused
+      if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+        const n = data as AppNotification
+        const notif = new Notification(n.title, {
+          body: n.body || undefined,
+          icon: '/logo.png',
+          tag: n.id,
+        })
+        notif.onclick = () => {
+          window.focus()
+          if (n.link) window.location.href = n.link
+          notif.close()
+        }
+        setTimeout(() => notif.close(), 8000)
+      }
     })
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
     return unsub
   },
 }))

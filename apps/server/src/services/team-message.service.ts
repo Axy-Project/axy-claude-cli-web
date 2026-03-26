@@ -61,7 +61,7 @@ class TeamMessageService {
     `) as any[]
 
     for (const member of members) {
-      broadcaster.toUser(member.user_id, 'team:message' as never, message as never)
+      broadcaster.toUser(member.user_id, 'team:message', message as any)
 
       // Create notification for each member
       await notificationService.create(member.user_id, {

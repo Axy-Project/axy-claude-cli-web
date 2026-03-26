@@ -313,7 +313,7 @@ if (config.useSqlite) {
       link TEXT,
       read INTEGER NOT NULL DEFAULT 0,
       metadata_json TEXT DEFAULT '{}',
-      created_at INTEGER NOT NULL
+      created_at TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS team_messages (
@@ -322,10 +322,10 @@ if (config.useSqlite) {
       sender_id TEXT NOT NULL REFERENCES users(id),
       content TEXT NOT NULL,
       reply_to_id TEXT,
-      linked_session_id TEXT REFERENCES sessions(id),
-      linked_project_id TEXT REFERENCES projects(id),
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      linked_session_id TEXT,
+      linked_project_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
     );
   `)
 
@@ -474,7 +474,55 @@ if (config.useSqlite) {
     CREATE INDEX IF NOT EXISTS idx_deploy_pipelines_project ON deploy_pipelines(project_id);
     CREATE INDEX IF NOT EXISTS idx_deploy_runs_pipeline ON deploy_runs(pipeline_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_deploy_runs_project ON deploy_runs(project_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id, read);
+    CREATE INDEX IF NOT EXISTS idx_team_messages_org ON team_messages(org_id, created_at);
   `)
+
+  // Migration: recreate notifications/team_messages if created_at is INTEGER instead of TEXT
+  try {
+    const notifCols = sqlite.prepare("PRAGMA table_info('notifications')").all() as { name: string; type: string }[]
+    const createdCol = notifCols.find((c) => c.name === 'created_at')
+    if (createdCol && createdCol.type === 'INTEGER') {
+      sqlite.exec('DROP TABLE IF EXISTS notifications')
+      sqlite.exec(`
+        CREATE TABLE notifications (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id),
+          type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          body TEXT,
+          link TEXT,
+          read INTEGER NOT NULL DEFAULT 0,
+          metadata_json TEXT DEFAULT '{}',
+          created_at TEXT NOT NULL
+        )
+      `)
+      console.log('[DB] Migrated: recreated notifications table with TEXT created_at')
+    }
+  } catch { /* ignore */ }
+
+  try {
+    const tmCols = sqlite.prepare("PRAGMA table_info('team_messages')").all() as { name: string; type: string }[]
+    const tmCreated = tmCols.find((c) => c.name === 'created_at')
+    if (tmCreated && tmCreated.type === 'INTEGER') {
+      sqlite.exec('DROP TABLE IF EXISTS team_messages')
+      sqlite.exec(`
+        CREATE TABLE team_messages (
+          id TEXT PRIMARY KEY,
+          org_id TEXT NOT NULL REFERENCES organizations(id),
+          sender_id TEXT NOT NULL REFERENCES users(id),
+          content TEXT NOT NULL,
+          reply_to_id TEXT,
+          linked_session_id TEXT,
+          linked_project_id TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `)
+      console.log('[DB] Migrated: recreated team_messages table with TEXT created_at')
+    }
+  } catch { /* ignore */ }
 
   _db = drizzle(sqlite, { schema: sqliteSchema })
   _schema = sqliteSchema

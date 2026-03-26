@@ -21,7 +21,7 @@ class NotificationService {
 
     await db.run(sql`
       INSERT INTO notifications (id, user_id, type, title, body, link, read, metadata_json, created_at)
-      VALUES (${id}, ${userId}, ${data.type}, ${data.title}, ${data.body || null}, ${data.link || null}, false, ${JSON.stringify(data.metadata || {})}, ${now.toISOString()})
+      VALUES (${id}, ${userId}, ${data.type}, ${data.title}, ${data.body || null}, ${data.link || null}, 0, ${JSON.stringify(data.metadata || {})}, ${now.toISOString()})
     `)
 
     const notification: Notification = {
@@ -37,14 +37,14 @@ class NotificationService {
     }
 
     // Push to user via WebSocket in real-time
-    broadcaster.toUser(userId, 'notification:new' as never, notification as never)
+    broadcaster.toUser(userId, 'notification:new', notification as any)
 
     return notification
   }
 
   async list(userId: string, opts: { limit?: number; unreadOnly?: boolean } = {}): Promise<Notification[]> {
     const { limit = 50, unreadOnly = false } = opts
-    const readFilter = unreadOnly ? sql`AND read = false` : sql``
+    const readFilter = unreadOnly ? sql`AND read = 0` : sql``
     const rows = await db.all(sql`
       SELECT id, user_id, type, title, body, link, read, metadata_json, created_at
       FROM notifications
@@ -68,20 +68,20 @@ class NotificationService {
 
   async unreadCount(userId: string): Promise<number> {
     const result = await db.all(sql`
-      SELECT COUNT(*) as count FROM notifications WHERE user_id = ${userId} AND read = false
+      SELECT COUNT(*) as count FROM notifications WHERE user_id = ${userId} AND read = 0
     `) as any[]
     return Number(result[0]?.count || 0)
   }
 
   async markRead(userId: string, notificationId: string): Promise<void> {
     await db.run(sql`
-      UPDATE notifications SET read = true WHERE id = ${notificationId} AND user_id = ${userId}
+      UPDATE notifications SET read = 1 WHERE id = ${notificationId} AND user_id = ${userId}
     `)
   }
 
   async markAllRead(userId: string): Promise<void> {
     await db.run(sql`
-      UPDATE notifications SET read = true WHERE user_id = ${userId} AND read = false
+      UPDATE notifications SET read = 1 WHERE user_id = ${userId} AND read = 0
     `)
   }
 

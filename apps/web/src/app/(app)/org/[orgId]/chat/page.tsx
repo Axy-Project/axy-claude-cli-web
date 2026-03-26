@@ -60,15 +60,19 @@ export default function TeamChatPage() {
     fetchMessages()
   }, [fetchMessages])
 
-  // Listen for real-time messages
+  // Listen for real-time messages from other users
   useEffect(() => {
     const unsub = wsClient.on('team:message', (data: WsServerEvents['team:message']) => {
-      if (data.orgId === orgId) {
-        setMessages((prev) => [...prev, data as TeamMessage])
+      if (data.orgId === orgId && data.senderId !== user?.id) {
+        setMessages((prev) => {
+          // Prevent duplicates
+          if (prev.some((m) => m.id === data.id)) return prev
+          return [...prev, data as TeamMessage]
+        })
       }
     })
     return unsub
-  }, [orgId])
+  }, [orgId, user?.id])
 
   // Auto-scroll on new messages
   useEffect(() => {
