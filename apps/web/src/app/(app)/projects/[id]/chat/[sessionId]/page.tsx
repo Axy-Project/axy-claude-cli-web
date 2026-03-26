@@ -136,8 +136,8 @@ function StreamingThinkingView({
       <Collapsible
         defaultOpen={true}
         header={(isOpen) => (
-          <span className="flex items-center gap-2 text-xs font-medium text-purple-400">
-            <span className="flex h-5 w-5 items-center justify-center rounded bg-purple-500/20 text-purple-400">
+          <span className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--primary)' }}>
+            <span className="flex h-5 w-5 items-center justify-center rounded" style={{ background: 'color-mix(in srgb, var(--primary) 15%, transparent)', color: 'var(--primary)' }}>
               <svg className="h-3 w-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5.002 5.002 0 01-6.364-2.637A5 5 0 018.464 6.1a5.002 5.002 0 017.072 0 5 5 0 01-1.172 7.265" />
               </svg>
@@ -157,8 +157,8 @@ function StreamingThinkingView({
           </span>
         )}
       >
-        <div className="ml-6 rounded border border-purple-500/10 bg-purple-500/5 px-3 py-2">
-          <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-purple-300/70">
+        <div className="ml-6 rounded px-3 py-2" style={{ background: 'color-mix(in srgb, var(--primary) 5%, transparent)', borderLeft: '2px solid color-mix(in srgb, var(--primary) 20%, transparent)' }}>
+          <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-[var(--muted-foreground)]/70">
             {thinking}
             <span className="animate-pulse">|</span>
           </pre>
@@ -812,10 +812,10 @@ function StreamingAssistantView() {
 
       {/* Compact status line: shows what tool is currently doing */}
       {statusLine && (
-        <div className="mb-2 flex items-center gap-2 rounded border border-[var(--border)]/30 bg-[var(--secondary)]/30 px-3 py-1">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
+        <div className="mb-2 flex items-center gap-2 rounded-md px-3 py-1" style={{ background: 'color-mix(in srgb, var(--primary) 8%, transparent)' }}>
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: 'var(--primary)' }} />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: 'var(--primary)' }} />
           </span>
           <span className="truncate font-mono text-[11px] text-[var(--muted-foreground)]">
             {statusLine}
@@ -829,9 +829,10 @@ function StreamingAssistantView() {
           <button
             type="button"
             onClick={() => setShowAllTools(!showAllTools)}
-            className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)]/50 bg-[var(--card)] px-3 py-1.5 text-left transition-colors hover:bg-[var(--accent)]/50"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left transition-colors hover:brightness-110"
+            style={{ background: 'color-mix(in srgb, var(--primary) 6%, transparent)' }}
           >
-            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-emerald-400">
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full" style={{ color: 'var(--primary)' }}>
               <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>

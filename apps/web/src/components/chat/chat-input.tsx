@@ -490,8 +490,8 @@ export const ChatInput = memo(function ChatInput({
       {/* Queue indicator + Hints below */}
       <div className="mt-2 flex items-center gap-4 px-4 text-[11px] text-[#767575]/60">
         {queueSize > 0 && (
-          <span className="flex items-center gap-1.5 rounded-full bg-[#bd9dff]/10 px-2.5 py-0.5 text-[#bd9dff]">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#bd9dff]" />
+          <span className="flex items-center gap-1.5 rounded-full px-2.5 py-0.5" style={{ background: 'color-mix(in srgb, var(--primary) 10%, transparent)', color: 'var(--primary)' }}>
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: 'var(--primary)' }} />
             {queueSize} message{queueSize > 1 ? 's' : ''} in queue
           </span>
         )}

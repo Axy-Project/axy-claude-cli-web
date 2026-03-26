@@ -146,7 +146,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
                 <div className="max-h-[420px] overflow-y-auto custom-scrollbar py-1">
                   {loadingRecent ? (
                     <div className="flex items-center justify-center py-8">
-                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#bd9dff]/30 border-t-[#bd9dff]" />
+                      <div className="h-5 w-5 animate-spin rounded-full border-2" style={{ borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)', borderTopColor: 'var(--primary)' }} />
                     </div>
                   ) : projectGroups.length === 0 ? (
                     <div className="py-8 text-center">

@@ -104,6 +104,19 @@ router.post('/send', async (req: AuthenticatedRequest, res) => {
     // Auto-subscribe user's WS connections to this session BEFORE emitting events
     broadcaster.subscribeUserToSession(req.userId!, sessionId)
 
+    // Build platform-aware system prompt: always inject Axy platform context
+    // so Claude knows it can use git push/pull directly (token is pre-injected)
+    const platformContext = [
+      'You are running inside the Axy platform.',
+      'Git & GitHub: The user\'s GitHub authentication is already configured in this environment.',
+      'You can run git push, git pull, and all git commands directly — they will work with the user\'s linked GitHub account.',
+      'Do NOT ask the user to authenticate, configure tokens, or run commands in a separate terminal. Just execute git commands directly when asked.',
+    ].join('\n')
+
+    const finalSystemPrompt = systemPrompt
+      ? `${systemPrompt}\n\n---\n${platformContext}`
+      : platformContext
+
     // Start async chat (streams via WebSocket)
     claudeService.sendMessage({
       sessionId,
@@ -113,7 +126,7 @@ router.post('/send', async (req: AuthenticatedRequest, res) => {
       projectPath: project.localPath,
       model: agentModel || session.model,
       mode: mode || session.mode,
-      systemPrompt,
+      systemPrompt: finalSystemPrompt,
       permissionMode: project.permissionMode,
       imagePaths,
       cliSessionId: session.cliSessionId,

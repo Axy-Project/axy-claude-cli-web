@@ -219,16 +219,20 @@ export class GitService {
     }
   }
 
-  /** Temporarily inject token into remote URL for auth */
+  /** Inject token into remote URL for auth (handles fresh and already-authenticated URLs) */
   private async setAuthenticatedRemote(git: SimpleGit, remote: string, token: string) {
     try {
       const remotes = await git.getRemotes(true)
       const origin = remotes.find((r) => r.name === remote)
       if (origin?.refs?.push) {
         const url = origin.refs.push
-        if (url.startsWith('https://') && !url.includes('@')) {
-          const authUrl = url.replace('https://', `https://x-access-token:${token}@`)
-          await git.remote(['set-url', remote, authUrl])
+        if (url.startsWith('https://')) {
+          // Strip any existing credentials and inject the new token
+          const cleanUrl = url.replace(/https:\/\/[^@]+@/, 'https://')
+          const authUrl = cleanUrl.replace('https://', `https://x-access-token:${token}@`)
+          if (authUrl !== url) {
+            await git.remote(['set-url', remote, authUrl])
+          }
         }
       }
     } catch {

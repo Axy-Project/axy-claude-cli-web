@@ -146,6 +146,7 @@ export class ClaudeService {
     streamBuffer.start(params.sessionId)
 
     let mcpConfigPath: string | null = null
+    let ghCredentialHelperPath: string | null = null
     let fullText = ''
     let fullThinking = ''
     let toolCalls: { name: string; input: Record<string, unknown>; id: string }[] = []
@@ -180,6 +181,25 @@ export class ClaudeService {
       } catch (err) {
         // Git failure should not block the chat
         log.warn('Git branch setup failed (non-fatal)', { error: (err as Error).message })
+      }
+
+      // --- Resolve GitHub token for git credential helper (injected later via env) ---
+      try {
+        const ghToken = await accountService.resolveGitHubToken(params.userId, params.projectId)
+        if (ghToken) {
+          // Create a temporary credential helper script that provides the token
+          // This is secure: token lives only in a temp file readable by this process,
+          // and the remote URL stays clean (no token in .git/config)
+          ghCredentialHelperPath = path.join(os.tmpdir(), `axy-git-cred-${params.sessionId}.sh`)
+          await fs.writeFile(
+            ghCredentialHelperPath,
+            `#!/bin/sh\necho "username=x-access-token"\necho "password=${ghToken}"\n`,
+            { mode: 0o700 },
+          )
+          log.info('Git credential helper created for Claude session')
+        }
+      } catch (err) {
+        log.warn('Git credential helper setup failed (non-fatal)', { error: (err as Error).message })
       }
 
       // --- MCP config integration ---
@@ -278,6 +298,14 @@ export class ClaudeService {
       const resolvedApiKey = await accountService.resolveClaudeApiKey(params.userId, params.projectId)
       if (resolvedApiKey) {
         env.ANTHROPIC_API_KEY = resolvedApiKey
+      }
+
+      // Inject git credential helper via env so git push/pull works with user's GitHub token
+      // GIT_CONFIG_* env vars override git config without modifying .git/config on disk
+      if (ghCredentialHelperPath) {
+        env.GIT_CONFIG_COUNT = '1'
+        env.GIT_CONFIG_KEY_0 = 'credential.helper'
+        env.GIT_CONFIG_VALUE_0 = ghCredentialHelperPath
       }
 
       log.debug('CLAUDECODE in env', { value: env.CLAUDECODE ?? '(unset)' })
@@ -477,6 +505,10 @@ export class ClaudeService {
       // Clean up MCP config temp file
       if (mcpConfigPath) {
         try { await fs.unlink(mcpConfigPath) } catch { /* ignore */ }
+      }
+      // Clean up git credential helper temp file
+      if (ghCredentialHelperPath) {
+        try { await fs.unlink(ghCredentialHelperPath) } catch { /* ignore */ }
       }
       // Process next queued message (if any)
       this.processQueue(params.sessionId)
