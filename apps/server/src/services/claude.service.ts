@@ -259,14 +259,10 @@ export class ClaudeService {
         args.push('--system-prompt', params.systemPrompt)
       }
 
-      // Allowed/disallowed tools
-      // Always allow git commands so push/pull/commit work regardless of permission mode
-      const baseAllowedTools = [
-        'Bash(git *)',
-        'Bash(git)',
-      ]
-      const mergedAllowedTools = [...baseAllowedTools, ...(params.allowedTools || [])]
-      args.push('--allowedTools', ...mergedAllowedTools)
+      // Allowed/disallowed tools (agent-specific only)
+      if (params.allowedTools?.length) {
+        args.push('--allowedTools', ...params.allowedTools)
+      }
       if (params.disallowedTools?.length) {
         args.push('--disallowedTools', ...params.disallowedTools)
       }

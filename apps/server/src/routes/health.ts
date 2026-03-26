@@ -178,4 +178,102 @@ router.post('/update', async (_req, res) => {
   }
 })
 
+/** GET /api/health/versions - List available versions from GitHub tags */
+router.get('/versions', async (_req, res) => {
+  try {
+    const response = await fetch('https://api.github.com/repos/Axy-Project/axy-claude-cli-web/tags?per_page=20', {
+      headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Axy-Server' },
+    })
+    if (!response.ok) {
+      res.json({ success: true, data: { current: appVersion, versions: [] } })
+      return
+    }
+    const tags = (await response.json()) as { name: string }[]
+    const versions = tags
+      .map((t) => t.name.replace(/^v/, ''))
+      .filter((v) => /^\d+\.\d+\.\d+/.test(v))
+    res.json({ success: true, data: { current: appVersion, versions } })
+  } catch {
+    res.json({ success: true, data: { current: appVersion, versions: [] } })
+  }
+})
+
+/** POST /api/health/rollback - Rollback to a specific version via Docker */
+router.post('/rollback', async (req, res) => {
+  try {
+    const { version: targetVersion } = req.body as { version?: string }
+    if (!targetVersion || !/^\d+\.\d+\.\d+/.test(targetVersion)) {
+      res.status(400).json({ success: false, error: 'Valid version required (e.g. 1.5.9)' })
+      return
+    }
+
+    const { exec } = await import('child_process')
+    const { existsSync, readFileSync } = await import('fs')
+
+    if (!existsSync('/var/run/docker.sock')) {
+      res.status(400).json({ success: false, error: 'Docker socket not available. Mount /var/run/docker.sock to enable rollback.' })
+      return
+    }
+
+    let containerId = ''
+    try { containerId = readFileSync('/etc/hostname', 'utf-8').trim() } catch { /* ignore */ }
+
+    writeUpdateStatus({ status: 'pulling', message: `Rolling back to v${targetVersion}...`, startedAt: new Date().toISOString() })
+    res.json({ success: true, message: `Rollback to v${targetVersion} started. Server will restart shortly.` })
+
+    setTimeout(() => {
+      const inspectCmd = `docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.project.working_dir"}}' ${containerId} 2>/dev/null`
+
+      exec(inspectCmd, { timeout: 10000 }, (_err, labels) => {
+        const [projectName, hostWorkDir] = (labels?.trim() || '').split('|')
+
+        if (projectName && hostWorkDir) {
+          const composeFile = `${hostWorkDir}/docker-compose.yml`
+          const envFile = `${hostWorkDir}/.env`
+          const compose = `docker compose -p "${projectName}" -f "${composeFile}" --env-file "${envFile}" --project-directory "${hostWorkDir}"`
+          const isBuildFromSource = fs.existsSync('/opt/axy-src/.git')
+
+          let sidecarScript: string
+          if (isBuildFromSource) {
+            sidecarScript = [
+              `git -C "${hostWorkDir}" fetch --tags 2>&1`,
+              `git -C "${hostWorkDir}" checkout "v${targetVersion}" 2>&1`,
+              `${compose} build --no-cache 2>&1`,
+              `${compose} up -d 2>&1`,
+            ].join(' && ')
+          } else {
+            // For pre-built images, tag-based rollback isn't straightforward
+            // Fall back to git checkout approach
+            sidecarScript = [
+              `git -C "${hostWorkDir}" fetch --tags 2>&1`,
+              `git -C "${hostWorkDir}" checkout "v${targetVersion}" 2>&1`,
+              `${compose} build --no-cache 2>&1`,
+              `${compose} up -d 2>&1`,
+            ].join(' && ')
+          }
+
+          const sidecarImage = 'alpine:latest'
+          const installDeps = 'apk add --no-cache git docker-cli docker-cli-compose && '
+
+          const rollbackCmd = `docker run --rm -d ` +
+            `-v /var/run/docker.sock:/var/run/docker.sock ` +
+            `-v "${hostWorkDir}:${hostWorkDir}" ` +
+            `${sidecarImage} sh -c '${installDeps}${sidecarScript}'`
+
+          writeUpdateStatus({ status: 'restarting', message: `Rolling back to v${targetVersion}...`, startedAt: new Date().toISOString() })
+          console.log(`[Rollback] Launching sidecar for v${targetVersion}`)
+          exec(rollbackCmd, { timeout: 30000 }, (err, out, stderr) => {
+            if (err) console.error('[Rollback] Sidecar launch failed:', err.message, stderr)
+            else console.log('[Rollback] Sidecar launched:', out.trim())
+          })
+        } else {
+          writeUpdateStatus({ status: 'error', message: 'Cannot determine Docker Compose configuration for rollback.' })
+        }
+      })
+    }, 1000)
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
 export default router

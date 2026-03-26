@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -42,6 +42,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [router])
 
+  const [versionPanelOpen, setVersionPanelOpen] = useState(false)
   const sidebarWidth = collapsed ? 'w-[68px]' : 'w-64'
 
   return (
@@ -139,15 +140,222 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               </a>
             </div>
           )}
-          {/* Version */}
-          {version && !collapsed && (
-            <p className="mt-2 px-4 text-[10px] text-[var(--muted-foreground)]/50">v{version}</p>
-          )}
-          {version && collapsed && (
-            <p className="mt-2 text-center text-[9px] text-[var(--muted-foreground)]/50">{version}</p>
+          {/* Version badge — clickable to open version manager */}
+          {version && (
+            <VersionBadge version={version} collapsed={collapsed} />
           )}
         </div>
       </aside>
     </>
+  )
+}
+
+// ────────────────────────────────────────────────────────────
+// Version Badge + Version Manager Popup
+// ────────────────────────────────────────────────────────────
+function VersionBadge({ version, collapsed }: { version: string; collapsed: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [versions, setVersions] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [actionVersion, setActionVersion] = useState<string | null>(null)
+  const [actionType, setActionType] = useState<'update' | 'rollback' | null>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
+
+  // Close on click outside
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  // Fetch versions when opened
+  const fetchVersions = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await api.get<{ current: string; versions: string[] }>('/api/health/versions')
+      setVersions(res.versions)
+    } catch { /* ignore */ }
+    setLoading(false)
+  }, [])
+
+  const handleOpen = () => {
+    setOpen(!open)
+    if (!open) fetchVersions()
+  }
+
+  const handleAction = async (targetVersion: string, type: 'update' | 'rollback') => {
+    const label = type === 'update' ? 'Update' : 'Rollback'
+    if (!confirm(`${label} to v${targetVersion}?\n\nThe server will restart. This may take 1-2 minutes.`)) return
+
+    setActionVersion(targetVersion)
+    setActionType(type)
+    try {
+      const endpoint = type === 'update' ? '/api/health/update' : '/api/health/rollback'
+      const body = type === 'rollback' ? { version: targetVersion } : undefined
+      const apiUrl = typeof window !== 'undefined'
+        ? (window.location.port === '' || window.location.port === '80' || window.location.port === '443')
+          ? `${window.location.protocol}//${window.location.hostname}`
+          : `${window.location.protocol}//${window.location.hostname}:3456`
+        : ''
+      const res = await fetch(`${apiUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      })
+      const data = await res.json()
+      if (!data.success) {
+        alert(data.error || `${label} failed`)
+        setActionVersion(null)
+        setActionType(null)
+        return
+      }
+      // Poll until server comes back with new version
+      const poll = setInterval(async () => {
+        try {
+          const r = await fetch(`${apiUrl}/api/health`)
+          if (r.ok) {
+            const h = await r.json()
+            if (h.version !== version) {
+              clearInterval(poll)
+              window.location.reload()
+            }
+          }
+        } catch { /* server restarting */ }
+      }, 5000)
+      setTimeout(() => { clearInterval(poll); setActionVersion(null); setActionType(null) }, 180000)
+    } catch {
+      setActionVersion(null)
+      setActionType(null)
+    }
+  }
+
+  const compareVersions = (a: string, b: string) => {
+    const pa = a.split('.').map(Number)
+    const pb = b.split('.').map(Number)
+    for (let i = 0; i < 3; i++) {
+      if ((pa[i] || 0) > (pb[i] || 0)) return 1
+      if ((pa[i] || 0) < (pb[i] || 0)) return -1
+    }
+    return 0
+  }
+
+  return (
+    <div className="relative mt-2">
+      <button
+        onClick={handleOpen}
+        className={cn(
+          'flex items-center gap-1 rounded-md transition-colors hover:bg-[var(--surface-mid)]',
+          collapsed ? 'mx-auto px-1.5 py-1' : 'px-4 py-1'
+        )}
+      >
+        <span className={cn('font-mono font-medium text-[var(--muted-foreground)]/60 transition-colors hover:text-[var(--primary)]', collapsed ? 'text-[9px]' : 'text-[10px]')}>
+          v{version}
+        </span>
+        {!collapsed && (
+          <svg className="h-3 w-3 text-[var(--muted-foreground)]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+          </svg>
+        )}
+      </button>
+
+      {/* Version manager popup */}
+      {open && (
+        <div
+          ref={popupRef}
+          className="absolute bottom-full left-0 z-[60] mb-2 w-64 rounded-lg shadow-2xl"
+          style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.25)' }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
+            <span className="text-xs font-semibold text-white">Version Manager</span>
+            <span className="rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold" style={{ background: 'color-mix(in srgb, var(--primary) 15%, transparent)', color: 'var(--primary)' }}>
+              v{version}
+            </span>
+          </div>
+
+          {/* Version list */}
+          <div className="custom-scrollbar max-h-[240px] overflow-y-auto py-1">
+            {loading ? (
+              <div className="flex items-center justify-center py-6">
+                <div className="h-4 w-4 animate-spin rounded-full border-2" style={{ borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)', borderTopColor: 'var(--primary)' }} />
+              </div>
+            ) : versions.length === 0 ? (
+              <p className="py-4 text-center text-[11px] text-[var(--muted-foreground)]">No versions found</p>
+            ) : (
+              versions.map((v) => {
+                const cmp = compareVersions(v, version)
+                const isCurrent = cmp === 0
+                const isNewer = cmp > 0
+                const isProcessing = actionVersion === v
+
+                return (
+                  <div
+                    key={v}
+                    className={cn(
+                      'flex items-center justify-between px-3 py-1.5 transition-colors',
+                      isCurrent ? '' : 'hover:bg-[var(--surface-mid)]'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={cn('font-mono text-[12px]', isCurrent ? 'font-bold text-[var(--primary)]' : 'text-[#e0e0e0]')}>
+                        v{v}
+                      </span>
+                      {isCurrent && (
+                        <span className="rounded-sm px-1 py-0.5 text-[9px] font-bold uppercase" style={{ background: 'color-mix(in srgb, var(--primary) 15%, transparent)', color: 'var(--primary)' }}>
+                          current
+                        </span>
+                      )}
+                      {isNewer && (
+                        <span className="rounded-sm bg-emerald-500/15 px-1 py-0.5 text-[9px] font-bold uppercase text-emerald-400">
+                          new
+                        </span>
+                      )}
+                    </div>
+
+                    {!isCurrent && (
+                      <button
+                        onClick={() => handleAction(v, isNewer ? 'update' : 'rollback')}
+                        disabled={!!actionVersion}
+                        className={cn(
+                          'rounded-md px-2 py-0.5 text-[10px] font-medium transition-all disabled:opacity-40',
+                          isNewer
+                            ? 'text-emerald-400 hover:bg-emerald-500/15'
+                            : 'text-amber-400 hover:bg-amber-500/15'
+                        )}
+                      >
+                        {isProcessing ? (
+                          <span className="flex items-center gap-1">
+                            <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-current border-t-transparent" />
+                            {actionType === 'update' ? 'Updating...' : 'Rolling back...'}
+                          </span>
+                        ) : isNewer ? 'Update' : 'Rollback'}
+                      </button>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-3 py-1.5" style={{ borderTop: '1px solid rgba(72,72,71,0.15)' }}>
+            <a
+              href="https://github.com/Axy-Project/axy-claude-cli-web/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[10px] text-[var(--muted-foreground)] transition-colors hover:text-white"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Release Notes
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
