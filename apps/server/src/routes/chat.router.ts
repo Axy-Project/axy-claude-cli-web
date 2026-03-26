@@ -26,8 +26,9 @@ router.post('/send', async (req: AuthenticatedRequest, res) => {
       effort?: string
     }
 
-    if (!sessionId || !content) {
-      res.status(400).json({ success: false, error: 'sessionId and content are required' })
+    const hasImages = images && images.length > 0
+    if (!sessionId || (!content && !hasImages)) {
+      res.status(400).json({ success: false, error: 'sessionId and content (or images) are required' })
       return
     }
 
@@ -117,11 +118,14 @@ router.post('/send', async (req: AuthenticatedRequest, res) => {
       ? `${systemPrompt}\n\n---\n${platformContext}`
       : platformContext
 
+    // For image-only messages, use a placeholder so Claude knows to analyze the images
+    const messageContent = content || (hasImages ? 'Analyze the attached image(s).' : '')
+
     // Start async chat (streams via WebSocket)
     claudeService.sendMessage({
       sessionId,
       userId: req.userId!,
-      content,
+      content: messageContent,
       projectId: session.projectId,
       projectPath: project.localPath,
       model: agentModel || session.model,

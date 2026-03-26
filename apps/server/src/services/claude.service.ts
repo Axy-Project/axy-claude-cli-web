@@ -260,9 +260,13 @@ export class ClaudeService {
       }
 
       // Allowed/disallowed tools
-      if (params.allowedTools?.length) {
-        args.push('--allowedTools', ...params.allowedTools)
-      }
+      // Always allow git commands so push/pull/commit work regardless of permission mode
+      const baseAllowedTools = [
+        'Bash(git *)',
+        'Bash(git)',
+      ]
+      const mergedAllowedTools = [...baseAllowedTools, ...(params.allowedTools || [])]
+      args.push('--allowedTools', ...mergedAllowedTools)
       if (params.disallowedTools?.length) {
         args.push('--disallowedTools', ...params.disallowedTools)
       }

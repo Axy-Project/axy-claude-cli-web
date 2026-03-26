@@ -533,7 +533,7 @@ const markdownComponents: Components = {
 
 function MarkdownContent({ content }: { content: string }) {
   return (
-    <div className="prose prose-base dark:prose-invert max-w-none overflow-hidden break-words prose-headings:font-headline prose-headings:font-semibold prose-headings:text-[#bd9dff] prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-h4:text-sm prose-p:text-[16px] prose-p:leading-[1.7] prose-p:text-[#e0e0e0] prose-strong:text-white prose-em:text-[#adaaaa] prose-a:text-[#bd9dff] prose-a:underline prose-li:text-[16px] prose-li:leading-[1.7] prose-li:text-[#e0e0e0] prose-ul:my-3 prose-ol:my-3 prose-li:my-1 prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 prose-table:m-0 prose-blockquote:border-[#bd9dff]/30 prose-blockquote:text-[#adaaaa]">
+    <div className="prose prose-sm dark:prose-invert max-w-none overflow-hidden break-words prose-headings:font-headline prose-headings:font-semibold prose-headings:text-[#bd9dff] prose-h1:text-lg prose-h2:text-base prose-h3:text-sm prose-h4:text-sm prose-p:text-[14px] prose-p:leading-[1.55] prose-p:text-[#e0e0e0] prose-strong:text-white prose-em:text-[#adaaaa] prose-a:text-[#bd9dff] prose-a:underline prose-li:text-[14px] prose-li:leading-[1.55] prose-li:text-[#e0e0e0] prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0 prose-table:m-0 prose-blockquote:border-[#bd9dff]/30 prose-blockquote:text-[#adaaaa] prose-p:my-1.5 prose-headings:my-2">
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} components={markdownComponents}>{content}</ReactMarkdown>
     </div>
   )
@@ -547,9 +547,9 @@ const UserMessageView = memo(function UserMessageView({ msg }: { msg: Message })
   const images = msg.contentJson.filter((b) => b.type === 'image')
   const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   return (
-    <div className="py-5" style={{ borderTop: '1px solid rgba(72,72,71,0.08)' }}>
+    <div className="py-3" style={{ borderTop: '1px solid rgba(72,72,71,0.08)' }}>
       {/* Label */}
-      <div className="mb-3 text-right">
+      <div className="mb-1.5 text-right">
         <span className="font-label text-[10px] font-semibold uppercase tracking-[0.15em] text-[#767575]">
           USER // LOCALHOST
           <span className="ml-1">&#8226;</span>
@@ -557,8 +557,8 @@ const UserMessageView = memo(function UserMessageView({ msg }: { msg: Message })
         </span>
       </div>
       {/* Message bubble */}
-      <div className="overflow-hidden rounded-[0.75rem] px-4 py-4 md:px-7 md:py-6" style={{ background: 'rgba(26,26,26,0.6)', border: '1px solid rgba(72,72,71,0.12)', borderLeft: '3px solid rgba(189,157,255,0.3)' }}>
-        <pre className="whitespace-pre-wrap break-words font-sans text-[15px] leading-[1.7] text-[#e0e0e0] md:text-[16px]">
+      <div className="overflow-hidden rounded-[0.75rem] px-4 py-3 md:px-5 md:py-4" style={{ background: 'rgba(26,26,26,0.6)', border: '1px solid rgba(72,72,71,0.12)', borderLeft: '3px solid rgba(189,157,255,0.3)' }}>
+        <pre className="whitespace-pre-wrap break-words font-sans text-[14px] leading-[1.6] text-[#e0e0e0] md:text-[15px]">
           {text}
         </pre>
         {images.length > 0 && (
@@ -690,9 +690,9 @@ const AssistantMessageView = memo(function AssistantMessageView({ msg }: { msg: 
   const modelLabel = msg.model?.replace('claude-', '').replace(/-\d+$/, '').toUpperCase() || 'CLAUDE'
 
   return (
-    <div className="py-5" style={{ borderTop: '1px solid rgba(72,72,71,0.08)' }}>
+    <div className="py-3" style={{ borderTop: '1px solid rgba(72,72,71,0.08)' }}>
       {/* Label */}
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-1.5 flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-[#3bfb8c]" />
         <span className="font-label text-[10px] font-semibold uppercase tracking-[0.15em] text-[#767575]">
           CLAUDE // {modelLabel}
@@ -701,7 +701,7 @@ const AssistantMessageView = memo(function AssistantMessageView({ msg }: { msg: 
       </div>
 
       {/* Message content */}
-      <div className="rounded-[0.75rem] px-7 py-6" style={{ background: 'rgba(19,19,19,0.6)', border: '1px solid rgba(72,72,71,0.12)', borderLeft: '3px solid rgba(59,251,140,0.25)' }}>
+      <div className="rounded-[0.75rem] px-4 py-3 md:px-5 md:py-4" style={{ background: 'rgba(19,19,19,0.6)', border: '1px solid rgba(72,72,71,0.12)', borderLeft: '3px solid rgba(59,251,140,0.25)' }}>
         {/* Thinking */}
         {thinkingBlocks.map((tb, i) => (
           <ThinkingBlockView key={`t-${i}`} thinking={tb.thinking} durationMs={tb.durationMs} />
@@ -715,7 +715,7 @@ const AssistantMessageView = memo(function AssistantMessageView({ msg }: { msg: 
         {/* Text content */}
         {textBlocks.length > 0 ? (
           textBlocks.map((text, i) => (
-            <div key={`txt-${i}`} className="mb-3">
+            <div key={`txt-${i}`} className="mb-1">
               <MarkdownContent content={text} />
             </div>
           ))
@@ -2074,7 +2074,7 @@ export default function ChatSessionPage() {
         />
 
         {/* Engine badge (model selector) + shortcut — right-aligned, hidden on mobile */}
-        <div className="hidden items-center justify-end gap-2 pb-2 md:flex">
+        <div className="hidden items-center justify-end gap-2 pb-1 md:flex">
           <EngineModelSelector currentModel={currentSession?.model || 'claude-sonnet-4-6'} modelShort={modelShort} onSelect={handleModelChange} />
           <span className="rounded-[0.375rem] px-3 py-1.5 font-label text-[11px] font-semibold uppercase tracking-[0.12em] text-[#adaaaa]" style={{ background: '#1a1a1a', border: '1px solid rgba(72,72,71,0.2)' }}>
             {typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent) ? 'CMD' : 'CTRL'} + ENTER TO SEND

@@ -142,7 +142,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="truncate font-headline text-lg font-bold tracking-tight text-white md:text-xl">{currentProject?.name || 'Loading...'}</h1>
+            <h1 className="truncate font-headline text-base font-bold tracking-tight text-white md:text-lg">{currentProject?.name || 'Loading...'}</h1>
             {currentProject?.description && (
               <p className="truncate text-xs text-[#adaaaa]">{currentProject.description}</p>
             )}
@@ -229,7 +229,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
       </div>
 
       {/* ── Desktop: horizontal tabs (unchanged) ── */}
-      <div className="relative mt-4 hidden shrink-0 md:block" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
+      <div className="relative mt-2 hidden shrink-0 md:block" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
         <nav className="flex items-center gap-0">
           {primaryTabs.map((item) => {
             const href = `/projects/${projectId}${item.href}`
@@ -240,7 +240,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                 key={item.href}
                 href={href}
                 className={cn(
-                  'relative flex shrink-0 items-center gap-1.5 px-4 py-3 text-[13px] font-medium transition-colors',
+                  'relative flex shrink-0 items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium transition-colors',
                   active
                     ? 'text-[#bd9dff]'
                     : 'text-[#adaaaa] hover:text-white'
@@ -260,7 +260,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
             <button
               onClick={() => setMoreOpen((prev) => !prev)}
               className={cn(
-                'relative flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium transition-colors',
+                'relative flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium transition-colors',
                 isMoreItemActive
                   ? 'text-[#bd9dff]'
                   : 'text-[#adaaaa] hover:text-white'
@@ -304,7 +304,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
       </div>
 
       {/* Content */}
-      <div className="mt-5 min-h-0 flex-1">{children}</div>
+      <div className="mt-2 min-h-0 flex-1">{children}</div>
     </div>
   )
 }
