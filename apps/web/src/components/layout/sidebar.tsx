@@ -5,6 +5,12 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { api } from '@/lib/api-client'
+import { useNotificationStore } from '@/stores/notification.store'
+
+interface SimpleOrg {
+  id: string
+  name: string
+}
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: 'M3 3h7v7H3V3zm11 0h7v7h-7V3zm-11 11h7v7H3v-7zm11 0h7v7h-7v-7z' },
@@ -26,9 +32,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const [version, setVersion] = useState<string | null>(null)
+  const [userOrgs, setUserOrgs] = useState<SimpleOrg[]>([])
+  const [teamChatExpanded, setTeamChatExpanded] = useState(false)
+  const unreadCount = useNotificationStore((s) => s.unreadCount)
 
   useEffect(() => {
     fetch('/api/health').then(r => r.json()).then(d => setVersion(d.version)).catch(() => {})
+    // Fetch user's orgs for team chat quick access
+    api.get<SimpleOrg[]>('/api/orgs').then(setUserOrgs).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -106,6 +117,77 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               </Link>
             )
           })}
+
+          {/* Team Chat section */}
+          {userOrgs.length > 0 && (
+            <div className="mt-4 border-t border-[var(--border)]/30 pt-3">
+              {collapsed ? (
+                /* Collapsed: just show chat icon linking to first org */
+                <Link
+                  href={`/org/${userOrgs[0].id}/chat`}
+                  onClick={onClose}
+                  className={cn(
+                    'group flex items-center justify-center rounded-[0.375rem] px-2 py-3 transition-all duration-200',
+                    pathname.includes('/chat') && pathname.includes('/org/')
+                      ? 'bg-gradient-to-r from-[var(--primary)]/10 to-transparent text-white'
+                      : 'text-[var(--muted-foreground)] hover:bg-[var(--surface-mid)] hover:text-white'
+                  )}
+                  title="Team Chat"
+                >
+                  <svg className="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+                  </svg>
+                </Link>
+              ) : (
+                <>
+                  {/* Header */}
+                  <button
+                    onClick={() => setTeamChatExpanded(!teamChatExpanded)}
+                    className="flex w-full items-center gap-3 rounded-[0.375rem] px-4 py-2 text-[var(--muted-foreground)] transition-colors hover:text-white"
+                  >
+                    <svg className="h-4 w-4 shrink-0" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+                    </svg>
+                    <span className="flex-1 text-left text-xs font-semibold uppercase tracking-wider">Team Chat</span>
+                    <svg className={cn('h-3 w-3 transition-transform', teamChatExpanded && 'rotate-180')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Org chat links */}
+                  {teamChatExpanded && (
+                    <div className="mt-1 space-y-0.5 pl-4">
+                      {userOrgs.map((org) => {
+                        const chatPath = `/org/${org.id}/chat`
+                        const isActive = pathname === chatPath
+                        return (
+                          <Link
+                            key={org.id}
+                            href={chatPath}
+                            onClick={onClose}
+                            className={cn(
+                              'flex items-center gap-2.5 rounded-[0.375rem] px-3 py-2 text-xs transition-all',
+                              isActive
+                                ? 'bg-[var(--primary)]/10 text-white font-medium'
+                                : 'text-[var(--muted-foreground)] hover:bg-[var(--surface-mid)] hover:text-white'
+                            )}
+                          >
+                            <div
+                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-bold"
+                              style={{ background: 'color-mix(in srgb, var(--primary) 20%, transparent)', color: 'var(--primary)' }}
+                            >
+                              {org.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="truncate">{org.name}</span>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </nav>
 
         {/* Bottom: collapse toggle + links */}

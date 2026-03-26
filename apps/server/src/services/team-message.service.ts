@@ -68,7 +68,7 @@ class TeamMessageService {
         type: 'team_message',
         title: `${sender?.display_name || 'Someone'} in team chat`,
         body: data.content.length > 100 ? data.content.slice(0, 100) + '...' : data.content,
-        link: `/org`,
+        link: `/org/${data.orgId}/chat`,
         metadata: { orgId: data.orgId, messageId: id },
       })
     }
