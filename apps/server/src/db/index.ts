@@ -303,6 +303,30 @@ if (config.useSqlite) {
       duration_ms INTEGER,
       created_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT,
+      link TEXT,
+      read INTEGER NOT NULL DEFAULT 0,
+      metadata_json TEXT DEFAULT '{}',
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS team_messages (
+      id TEXT PRIMARY KEY,
+      org_id TEXT NOT NULL REFERENCES organizations(id),
+      sender_id TEXT NOT NULL REFERENCES users(id),
+      content TEXT NOT NULL,
+      reply_to_id TEXT,
+      linked_session_id TEXT REFERENCES sessions(id),
+      linked_project_id TEXT REFERENCES projects(id),
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
   `)
 
   // Migration: add cli_session_id column if missing
@@ -749,6 +773,28 @@ if (config.useSqlite) {
         completed_at TIMESTAMPTZ,
         duration_ms INTEGER,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS notifications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT,
+        link TEXT,
+        read BOOLEAN NOT NULL DEFAULT false,
+        metadata_json JSONB DEFAULT '{}',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS team_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        reply_to_id UUID,
+        linked_session_id UUID REFERENCES sessions(id) ON DELETE SET NULL,
+        linked_project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `)
 

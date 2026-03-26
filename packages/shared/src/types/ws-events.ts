@@ -121,6 +121,31 @@ export interface WsServerEvents {
     sessionId: string
     queueSize: number
   }
+  'notification:new': {
+    id: string
+    userId: string
+    type: string
+    title: string
+    body?: string | null
+    link?: string | null
+    read: boolean
+    metadataJson?: unknown
+    createdAt: string
+  }
+  'team:message': {
+    id: string
+    orgId: string
+    senderId: string
+    senderName?: string
+    senderAvatar?: string
+    content: string
+    replyToId?: string | null
+    linkedSessionId?: string | null
+    linkedProjectId?: string | null
+    linkedProjectName?: string | null
+    createdAt: string
+    updatedAt: string
+  }
 }
 
 export interface StreamChunk {

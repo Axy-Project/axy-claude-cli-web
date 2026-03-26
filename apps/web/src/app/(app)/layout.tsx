@@ -11,6 +11,7 @@ import { CommandPalette } from '@/components/command-palette'
 import { KeyboardShortcutsDialog } from '@/components/keyboard-shortcuts-dialog'
 import { useKeyboardShortcuts, type Shortcut } from '@/hooks/use-keyboard-shortcuts'
 import { wsClient, type WsConnectionState } from '@/lib/ws-client'
+import { useNotificationStore } from '@/stores/notification.store'
 
 interface UpdateInfo {
   current: string
@@ -89,6 +90,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       wsCleanupRef.current?.()
       wsCleanupRef.current = null
     }
+  }, [isAuthenticated])
+
+  // Notification WS listener + initial fetch
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const notifStore = useNotificationStore.getState()
+    notifStore.fetchCount()
+    const unsub = notifStore.initWsListener()
+    return unsub
   }, [isAuthenticated])
 
   // Check for updates every 10 minutes — compare local version against GitHub directly

@@ -1487,6 +1487,24 @@ export default function ChatSessionPage() {
     prevStreamingRef.current = isStreaming
   }, [isStreaming, scrollToBottom])
 
+  // Force scroll to bottom on initial load (after messages are rendered)
+  const initialScrollDone = useRef(false)
+  useEffect(() => {
+    if (messages.length > 0 && !initialScrollDone.current) {
+      initialScrollDone.current = true
+      // Use multiple rAFs to ensure DOM is fully rendered
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+            isNearBottomRef.current = true
+            setShowScrollButton(false)
+          }
+        })
+      })
+    }
+  }, [messages])
+
   // Focus input on mount
   useEffect(() => {
     // @ts-expect-error - ChatInput exposes via window

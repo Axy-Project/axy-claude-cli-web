@@ -262,10 +262,10 @@ export default function ProjectSettingsPage() {
             onChange={(e) => setForm({ ...form, permissionMode: e.target.value as PermissionMode })}
             className="w-full rounded-lg border border-[var(--input)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--primary)]"
           >
-            <option value="default">Default (ask for permissions)</option>
-            <option value="accept_edits">Accept Edits (auto-approve file changes)</option>
+            <option value="default">Auto (smart auto-approve)</option>
+            <option value="accept_edits">Accept Edits (auto-approve file changes only)</option>
             <option value="plan">Plan Only (read-only mode)</option>
-            <option value="bypass">Bypass Permissions (dangerous)</option>
+            <option value="bypass">Bypass All (no restrictions)</option>
           </select>
           {form.permissionMode === 'bypass' && (
             <p className="mt-1 text-xs text-[var(--destructive)]">

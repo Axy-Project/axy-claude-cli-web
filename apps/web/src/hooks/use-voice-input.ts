@@ -18,13 +18,28 @@ interface UseVoiceInputReturn {
   toggleListening: () => void
 }
 
+// Detect browser language, fallback to navigator.language
+function getBrowserLanguage(): string {
+  if (typeof navigator === 'undefined') return 'en-US'
+  return navigator.language || 'en-US'
+}
+
 export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInputReturn {
-  const { onResult, onInterimResult, language = 'es-ES', continuous = true } = options
+  const { onResult, onInterimResult, language, continuous = true } = options
+  const resolvedLanguage = language || getBrowserLanguage()
   const [isListening, setIsListening] = useState(false)
   const [transcript, setTranscript] = useState('')
   const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const isListeningRef = useRef(false) // Avoids stale closure
+  const onResultRef = useRef(onResult)
+  const onInterimRef = useRef(onInterimResult)
   const isSupported = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
 
+  // Keep refs in sync
+  onResultRef.current = onResult
+  onInterimRef.current = onInterimResult
+
+  // Create recognition once, not on every state change
   useEffect(() => {
     if (!isSupported) return
 
@@ -32,7 +47,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     const recognition = new SpeechRecognition()
     recognition.continuous = continuous
     recognition.interimResults = true
-    recognition.lang = language
+    recognition.lang = resolvedLanguage
     recognition.maxAlternatives = 1
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -50,26 +65,28 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
       if (finalTranscript) {
         setTranscript(finalTranscript)
-        onResult?.(finalTranscript)
+        onResultRef.current?.(finalTranscript)
       }
       if (interimTranscript) {
-        onInterimResult?.(interimTranscript)
+        onInterimRef.current?.(interimTranscript)
       }
     }
 
     recognition.onerror = (event) => {
       console.error('[Voice] Error:', event.error)
-      if (event.error !== 'no-speech') {
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        isListeningRef.current = false
         setIsListening(false)
       }
     }
 
     recognition.onend = () => {
       // Auto-restart if still supposed to be listening (continuous mode)
-      if (recognitionRef.current && isListening) {
+      if (isListeningRef.current) {
         try {
           recognition.start()
         } catch {
+          isListeningRef.current = false
           setIsListening(false)
         }
       } else {
@@ -86,12 +103,14 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
       try { recognition.stop() } catch { /* ignore */ }
       recognitionRef.current = null
     }
-  }, [isSupported, language, continuous, onResult, onInterimResult, isListening])
+  // Only recreate when these fundamentals change, NOT on isListening
+  }, [isSupported, resolvedLanguage, continuous])
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current) return
     try {
       recognitionRef.current.start()
+      isListeningRef.current = true
       setIsListening(true)
       setTranscript('')
     } catch {
@@ -101,6 +120,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
   const stopListening = useCallback(() => {
     if (!recognitionRef.current) return
+    isListeningRef.current = false
     setIsListening(false)
     try {
       recognitionRef.current.stop()
@@ -108,12 +128,12 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
   }, [])
 
   const toggleListening = useCallback(() => {
-    if (isListening) {
+    if (isListeningRef.current) {
       stopListening()
     } else {
       startListening()
     }
-  }, [isListening, startListening, stopListening])
+  }, [startListening, stopListening])
 
   return {
     isListening,

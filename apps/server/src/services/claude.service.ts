@@ -236,23 +236,21 @@ export class ClaudeService {
         log.info('Resuming CLI session', { cliSessionId: params.cliSessionId })
       }
 
-      // Permission mode - use --permission-mode flag
-      // bypassPermissions is blocked by Claude CLI when running as root/sudo,
-      // so fall back to acceptEdits in that case (Docker containers run as root by default)
-      const isRoot = process.getuid?.() === 0
+      // Permission mode — since we use --print (non-interactive), stdin is closed
+      // so the CLI cannot prompt for permission approvals interactively.
+      // 'default' mode would silently block commands, so we upgrade to 'auto'
+      // which intelligently auto-approves common operations including git.
+      // 'bypass' uses --dangerously-skip-permissions which works even as root in Docker.
       if (params.permissionMode === 'bypass') {
-        if (isRoot) {
-          log.warn('Running as root — downgrading bypass to acceptEdits (Claude CLI restriction)')
-          args.push('--permission-mode', 'acceptEdits')
-        } else {
-          args.push('--permission-mode', 'bypassPermissions')
-        }
+        args.push('--dangerously-skip-permissions')
       } else if (params.permissionMode === 'plan') {
         args.push('--permission-mode', 'plan')
       } else if (params.permissionMode === 'accept_edits') {
         args.push('--permission-mode', 'acceptEdits')
+      } else {
+        // 'default' or unset — use 'auto' for non-interactive --print mode
+        args.push('--permission-mode', 'auto')
       }
-      // For 'default' mode, let the CLI handle permissions normally
 
       // System prompt
       if (params.systemPrompt) {
@@ -279,8 +277,8 @@ export class ClaudeService {
         prompt = `${params.content}\n\n[Attached images - read these files to see the images:]\n${imageRefs}`
       }
 
-      // The prompt itself
-      args.push(prompt)
+      // The prompt itself — use '--' to prevent prompts starting with '-' being parsed as CLI flags
+      args.push('--', prompt)
 
       // Resolve to absolute path
       const cwd = path.resolve(params.projectPath)

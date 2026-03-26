@@ -112,7 +112,7 @@ export default function OrgDashboardPage() {
       </div>
 
       {/* Quick navigation */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Link
           href={`/org/${orgId}/members`}
           className="group rounded-lg border border-[var(--border)] bg-[var(--card)] p-5 transition-colors hover:border-[var(--primary)]"
@@ -156,6 +156,33 @@ export default function OrgDashboardPage() {
               )}
             </div>
           )}
+        </Link>
+
+        <Link
+          href={`/org/${orgId}/chat`}
+          className="group rounded-lg border border-[var(--border)] bg-[var(--card)] p-5 transition-colors hover:border-[var(--primary)]"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium">Team Chat</h3>
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                Message your team in real-time
+              </p>
+            </div>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-[var(--muted-foreground)] transition-transform group-hover:translate-x-1"
+            >
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </div>
         </Link>
 
         <Link

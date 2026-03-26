@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useProjectStore } from '@/stores/project.store'
 import { useRouter, usePathname } from 'next/navigation'
 import { api } from '@/lib/api-client'
+import { useNotificationStore, type AppNotification } from '@/stores/notification.store'
 
 interface RecentSession {
   id: string
@@ -32,6 +33,10 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
   const profileRef = useRef<HTMLDivElement>(null)
   const quickAccessRef = useRef<HTMLDivElement>(null)
 
+  const [notifOpen, setNotifOpen] = useState(false)
+  const notifRef = useRef<HTMLDivElement>(null)
+  const { notifications, unreadCount, fetch: fetchNotifs, markRead, markAllRead, deleteNotification } = useNotificationStore()
+
   const isInProject = pathname.includes('/projects/') && pathname.split('/projects/')[1]?.length > 0
   const projectName = isInProject ? currentProject?.name : null
 
@@ -54,6 +59,21 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [quickAccessOpen])
+
+  // Close notifications on outside click
+  useEffect(() => {
+    if (!notifOpen) return
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [notifOpen])
+
+  // Fetch notifications when dropdown opens
+  useEffect(() => {
+    if (notifOpen) fetchNotifs()
+  }, [notifOpen, fetchNotifs])
 
   // Fetch recent sessions when quick access opens
   const fetchRecent = useCallback(async () => {
@@ -143,7 +163,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
                 </div>
 
                 {/* Content */}
-                <div className="max-h-[420px] overflow-y-auto custom-scrollbar py-1">
+                <div className="max-h-[calc(80vh-3.5rem)] overflow-y-auto custom-scrollbar py-1 sm:max-h-[360px]">
                   {loadingRecent ? (
                     <div className="flex items-center justify-center py-8">
                       <div className="h-5 w-5 animate-spin rounded-full border-2" style={{ borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)', borderTopColor: 'var(--primary)' }} />
@@ -222,11 +242,96 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
         </div>
 
         {/* Notification bell */}
-        <button className="rounded-full p-2 text-[var(--muted-foreground)] transition-colors hover:text-white">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-          </svg>
-        </button>
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => setNotifOpen(!notifOpen)}
+            className={`relative rounded-full p-2 transition-colors ${notifOpen ? 'text-[var(--primary)]' : 'text-[var(--muted-foreground)] hover:text-white'}`}
+            title="Notifications"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[9px] font-bold text-white" style={{ background: 'var(--primary)' }}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {notifOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+              <div
+                className="fixed inset-x-3 top-16 z-50 max-h-[80vh] rounded-[0.75rem] shadow-[0_40px_60px_-10px_rgba(255,255,255,0.04)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 sm:max-h-[420px]"
+                style={{ background: 'var(--surface-highest)', border: '1px solid rgba(72,72,71,0.2)' }}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-[var(--secondary-foreground)]">Notifications</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => markAllRead()}
+                      className="text-[10px] font-medium text-[var(--primary)] hover:brightness-125 transition-colors"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="max-h-[calc(80vh-3.5rem)] overflow-y-auto custom-scrollbar sm:max-h-[360px]">
+                  {notifications.length === 0 ? (
+                    <div className="py-10 text-center">
+                      <svg className="mx-auto h-8 w-8 text-[var(--muted-foreground)] opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                      </svg>
+                      <p className="mt-2 text-xs text-[var(--muted-foreground)]">No notifications yet</p>
+                    </div>
+                  ) : (
+                    notifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        className={`group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-[var(--surface-mid)] cursor-pointer ${!notif.read ? 'bg-[var(--primary)]/[0.03]' : ''}`}
+                        onClick={() => {
+                          if (!notif.read) markRead(notif.id)
+                          if (notif.link) {
+                            setNotifOpen(false)
+                            router.push(notif.link)
+                          }
+                        }}
+                      >
+                        {/* Unread dot */}
+                        <div className="mt-1.5 shrink-0">
+                          {!notif.read ? (
+                            <div className="h-2 w-2 rounded-full" style={{ background: 'var(--primary)' }} />
+                          ) : (
+                            <div className="h-2 w-2" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-xs font-medium ${!notif.read ? 'text-white' : 'text-[var(--secondary-foreground)]'}`}>
+                            {notif.title}
+                          </p>
+                          {notif.body && (
+                            <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)] line-clamp-2">{notif.body}</p>
+                          )}
+                          <p className="mt-1 text-[10px] text-[var(--muted-foreground)]">{formatRelativeTime(notif.createdAt)}</p>
+                        </div>
+                        {/* Delete */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id) }}
+                          className="mt-0.5 shrink-0 rounded p-1 text-[var(--muted-foreground)] opacity-0 transition-all hover:text-[var(--error)] group-hover:opacity-100"
+                        >
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
         {/* Help */}
         <button className="rounded-full p-2 text-[var(--muted-foreground)] transition-colors hover:text-white">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

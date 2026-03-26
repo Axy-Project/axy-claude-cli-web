@@ -323,3 +323,29 @@ export const deployRuns = pgTable('deploy_runs', {
   durationMs: integer('duration_ms'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
+
+// ─── Notifications ──────────────────────────────────────
+export const notifications = pgTable('notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  type: text('type').notNull(), // 'chat_complete' | 'team_message' | 'deploy_done' | 'deploy_failed' | 'mention' | 'system'
+  title: text('title').notNull(),
+  body: text('body'),
+  link: text('link'), // e.g. /projects/xxx/chat/yyy
+  read: boolean('read').notNull().default(false),
+  metadataJson: jsonb('metadata_json').default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
+// ─── Team Messages ──────────────────────────────────────
+export const teamMessages = pgTable('team_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+  senderId: uuid('sender_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  content: text('content').notNull(),
+  replyToId: uuid('reply_to_id'), // Self-referencing for threads
+  linkedSessionId: uuid('linked_session_id').references(() => sessions.id, { onDelete: 'set null' }), // Link to a Claude chat session
+  linkedProjectId: uuid('linked_project_id').references(() => projects.id, { onDelete: 'set null' }), // Link to a project
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+})

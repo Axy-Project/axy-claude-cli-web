@@ -43,6 +43,8 @@ import claudeAuthRouter from './routes/claude-auth.router.js'
 import claudeAuthPtyRouter from './routes/claude-auth-pty.router.js'
 import totpRouter from './routes/totp.router.js'
 import pluginsRouter from './routes/plugins.router.js'
+import notificationsRouter from './routes/notifications.router.js'
+import teamMessagesRouter from './routes/team-messages.router.js'
 
 const app = express()
 const server = createServer(app)
@@ -87,6 +89,8 @@ app.use('/api/search', searchRouter)
 app.use('/api/activity', activityRouter)
 app.use('/api/accounts', accountsRouter)
 app.use('/api/deploy', deployRouter)
+app.use('/api/notifications', notificationsRouter)
+app.use('/api/team-messages', teamMessagesRouter)
 
 // Initialize WebSocket
 wsManager.init(server)
