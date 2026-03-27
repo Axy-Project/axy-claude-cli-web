@@ -63,14 +63,14 @@ class TeamMessageService {
     for (const member of members) {
       broadcaster.toUser(member.user_id, 'team:message', message as any)
 
-      // Create notification for each member
-      await notificationService.create(member.user_id, {
+      // Create notification for each member (non-blocking — don't fail message send if notification fails)
+      notificationService.create(member.user_id, {
         type: 'team_message',
         title: `${sender?.display_name || 'Someone'} in team chat`,
         body: data.content.length > 100 ? data.content.slice(0, 100) + '...' : data.content,
         link: `/org/${data.orgId}/chat`,
         metadata: { orgId: data.orgId, messageId: id },
-      })
+      }).catch((err) => console.error('[TeamMessage] Failed to create notification:', err))
     }
 
     return message
