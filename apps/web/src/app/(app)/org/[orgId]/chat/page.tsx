@@ -191,14 +191,24 @@ export default function TeamChatPage() {
         {/* Online members avatars */}
         <div className="flex -space-x-1.5">
           {members.slice(0, 6).map((m) => (
-            <div
-              key={m.id}
-              className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--background)] text-[9px] font-medium"
-              style={{ background: 'color-mix(in srgb, var(--primary) 20%, transparent)', color: 'var(--primary)' }}
-              title={m.user?.displayName || 'Member'}
-            >
-              {m.user?.displayName?.charAt(0).toUpperCase() || '?'}
-            </div>
+            m.user?.avatarUrl ? (
+              <img
+                key={m.id}
+                src={m.user.avatarUrl}
+                alt=""
+                className="h-6 w-6 rounded-full border border-[var(--background)] object-cover"
+                title={m.user?.displayName || 'Member'}
+              />
+            ) : (
+              <div
+                key={m.id}
+                className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--background)] text-[9px] font-medium"
+                style={{ background: 'color-mix(in srgb, var(--primary) 20%, transparent)', color: 'var(--primary)' }}
+                title={m.user?.displayName || 'Member'}
+              >
+                {m.user?.displayName?.charAt(0).toUpperCase() || '?'}
+              </div>
+            )
           ))}
           {members.length > 6 && (
             <div className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--background)] bg-[var(--secondary)] text-[9px] text-[var(--muted-foreground)]">

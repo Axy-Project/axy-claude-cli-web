@@ -7,6 +7,13 @@ import { useRouter, usePathname } from 'next/navigation'
 import { api } from '@/lib/api-client'
 import { useNotificationStore, type AppNotification } from '@/stores/notification.store'
 
+interface TeamOrg {
+  id: string
+  name: string
+  slug: string
+  avatarUrl?: string | null
+}
+
 interface RecentSession {
   id: string
   projectId: string
@@ -36,6 +43,11 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
   const { notifications, unreadCount, fetch: fetchNotifs, markRead, markAllRead, deleteNotification } = useNotificationStore()
+
+  // Team Chat state
+  const [teamChatOpen, setTeamChatOpen] = useState(false)
+  const [teamOrgs, setTeamOrgs] = useState<TeamOrg[]>([])
+  const teamChatRef = useRef<HTMLDivElement>(null)
 
   const isInProject = pathname.includes('/projects/') && pathname.split('/projects/')[1]?.length > 0
   const projectName = isInProject ? currentProject?.name : null
@@ -69,6 +81,21 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [notifOpen])
+
+  // Close team chat on outside click
+  useEffect(() => {
+    if (!teamChatOpen) return
+    const handler = (e: MouseEvent) => {
+      if (teamChatRef.current && !teamChatRef.current.contains(e.target as Node)) setTeamChatOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [teamChatOpen])
+
+  // Fetch orgs on mount for team chat
+  useEffect(() => {
+    api.get<TeamOrg[]>('/api/orgs').then(setTeamOrgs).catch(() => {})
+  }, [])
 
   // Fetch notifications when dropdown opens
   useEffect(() => {
@@ -128,6 +155,70 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
             <span className="text-xs text-[var(--muted-foreground)]">Axy Web</span>
           )}
         </div>
+
+        {/* Team Chat dropdown — top-left */}
+        {teamOrgs.length > 0 && (
+          <div className="relative" ref={teamChatRef}>
+            <button
+              onClick={() => setTeamChatOpen(!teamChatOpen)}
+              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors ${teamChatOpen ? 'bg-[var(--primary)]/10 text-[var(--primary)]' : 'text-[var(--muted-foreground)] hover:bg-[var(--surface-mid)] hover:text-white'}`}
+              title="Team Chat"
+            >
+              <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+              </svg>
+              <span className="hidden sm:inline">Team Chat</span>
+            </button>
+
+            {teamChatOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setTeamChatOpen(false)} />
+                <div
+                  className="absolute left-0 top-full z-50 mt-2 w-64 rounded-[0.75rem] py-1 shadow-[0_40px_60px_-10px_rgba(255,255,255,0.04)]"
+                  style={{ background: 'var(--surface-highest)', border: '1px solid rgba(72,72,71,0.2)' }}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: '1px solid rgba(72,72,71,0.15)' }}>
+                    <span className="text-xs font-semibold uppercase tracking-widest text-[var(--secondary-foreground)]">Team Chat</span>
+                  </div>
+
+                  {/* Org list */}
+                  <div className="max-h-[300px] overflow-y-auto custom-scrollbar py-1">
+                    {teamOrgs.map((org) => (
+                      <button
+                        key={org.id}
+                        onClick={() => { setTeamChatOpen(false); router.push(`/org/${org.id}/chat`) }}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--surface-mid)]"
+                      >
+                        {org.avatarUrl ? (
+                          <img
+                            src={org.avatarUrl}
+                            alt=""
+                            className="h-7 w-7 shrink-0 rounded-md object-cover ring-1 ring-[rgba(72,72,71,0.2)]"
+                          />
+                        ) : (
+                          <div
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+                            style={{ background: 'linear-gradient(135deg, #bd9dff, #8a4cfc)' }}
+                          >
+                            <span className="text-[11px] font-bold text-white">{org.name.charAt(0).toUpperCase()}</span>
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className="truncate text-xs font-semibold text-white">{org.name}</p>
+                          <p className="truncate text-[10px] text-[var(--muted-foreground)]">@{org.slug}</p>
+                        </div>
+                        <svg className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Right: quick access + notification + help + avatar */}
