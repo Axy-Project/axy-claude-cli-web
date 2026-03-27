@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { db } from '../db/index.js'
+import { dbAll, dbRun } from '../db/index.js'
 import { broadcaster } from '../ws/broadcaster.js'
 import { notificationService } from './notification.service.js'
 
@@ -30,13 +30,13 @@ class TeamMessageService {
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
 
-    await db.run(sql`
+    await dbRun(sql`
       INSERT INTO team_messages (id, org_id, sender_id, content, reply_to_id, linked_session_id, linked_project_id, created_at, updated_at)
       VALUES (${id}, ${data.orgId}, ${data.senderId}, ${data.content}, ${data.replyToId || null}, ${data.linkedSessionId || null}, ${data.linkedProjectId || null}, ${now}, ${now})
     `)
 
     // Get sender info
-    const senderRows = await db.all(sql`
+    const senderRows = await dbAll(sql`
       SELECT display_name, avatar_url FROM users WHERE id = ${data.senderId}
     `) as any[]
     const sender = senderRows[0]
@@ -56,7 +56,7 @@ class TeamMessageService {
     }
 
     // Notify all org members via WebSocket (except sender)
-    const members = await db.all(sql`
+    const members = await dbAll(sql`
       SELECT user_id FROM org_members WHERE org_id = ${data.orgId} AND user_id != ${data.senderId}
     `) as any[]
 
@@ -80,7 +80,7 @@ class TeamMessageService {
     const { limit = 50, before } = opts
     const beforeFilter = before ? sql`AND tm.created_at < ${before}` : sql``
 
-    const rows = await db.all(sql`
+    const rows = await dbAll(sql`
       SELECT tm.id, tm.org_id, tm.sender_id, tm.content, tm.reply_to_id,
              tm.linked_session_id, tm.linked_project_id, tm.created_at, tm.updated_at,
              u.display_name as sender_name, u.avatar_url as sender_avatar,
@@ -110,11 +110,11 @@ class TeamMessageService {
   }
 
   async delete(messageId: string, userId: string): Promise<boolean> {
-    const rows = await db.all(sql`
+    const rows = await dbAll(sql`
       SELECT sender_id FROM team_messages WHERE id = ${messageId}
     `) as any[]
     if (!rows[0] || rows[0].sender_id !== userId) return false
-    await db.run(sql`DELETE FROM team_messages WHERE id = ${messageId}`)
+    await dbRun(sql`DELETE FROM team_messages WHERE id = ${messageId}`)
     return true
   }
 }

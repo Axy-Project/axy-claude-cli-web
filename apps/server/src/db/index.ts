@@ -891,3 +891,25 @@ if (config.useSqlite) {
 
 export const db = _db
 export const schema = _schema
+
+// ─── Cross-database raw SQL helpers ─────────────────────
+// SQLite drizzle has .all() / .run() but PostgreSQL drizzle only has .execute()
+// These helpers provide a uniform API that works on both drivers.
+import type { SQL } from 'drizzle-orm'
+
+export async function dbAll(query: SQL): Promise<any[]> {
+  if (config.useSqlite) {
+    return _db.all(query) as any[]
+  } else {
+    const result = await _db.execute(query)
+    return (result as any).rows ?? []
+  }
+}
+
+export async function dbRun(query: SQL): Promise<void> {
+  if (config.useSqlite) {
+    _db.run(query)
+  } else {
+    await _db.execute(query)
+  }
+}
