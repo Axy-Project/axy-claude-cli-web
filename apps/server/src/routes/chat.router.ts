@@ -144,6 +144,25 @@ router.post('/send', async (req: AuthenticatedRequest, res) => {
   }
 })
 
+/** POST /api/chat/btw - Send a "by the way" follow-up while Claude is working */
+router.post('/btw', async (req: AuthenticatedRequest, res) => {
+  try {
+    const { sessionId, message } = req.body as { sessionId?: string; message?: string }
+    if (!sessionId || !message) {
+      res.status(400).json({ success: false, error: 'sessionId and message are required' })
+      return
+    }
+    const accepted = claudeService.sendBtw(sessionId, message)
+    if (!accepted) {
+      res.status(400).json({ success: false, error: 'No active stream for this session. Send a regular message instead.' })
+      return
+    }
+    res.json({ success: true, data: { queued: true } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
 /** POST /api/chat/stop - Stop generation */
 router.post('/stop', async (req: AuthenticatedRequest, res) => {
   try {

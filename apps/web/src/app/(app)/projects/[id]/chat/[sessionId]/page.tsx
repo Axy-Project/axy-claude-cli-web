@@ -1195,6 +1195,7 @@ export default function ChatSessionPage() {
   // Effort level (thinking depth)
   const [effortLevel, setEffortLevel] = useState('medium')
   const [projectFiles, setProjectFiles] = useState<FileNode[]>([])
+  const [chatHistory, setChatHistory] = useState<string[]>([])
   // Scroll to bottom button
   const [showScrollButton, setShowScrollButton] = useState(false)
   // Message search
@@ -1281,6 +1282,7 @@ export default function ChatSessionPage() {
     fetchMessages,
     fetchMoreMessages,
     sendMessage,
+    sendBtw,
     stopGeneration,
     checkAndReplayStream,
     budgetWarning,
@@ -1347,7 +1349,7 @@ export default function ChatSessionPage() {
         })
         .filter(Boolean)
         .reverse()
-      // Message history is managed by ChatInput component
+      if (!cancelled) setChatHistory(userTexts)
       // 3. Small delay to let WS subscription register server-side before replay
       await new Promise(r => setTimeout(r, 300))
       // 4. Check if CLI is still running and replay buffered events
@@ -2107,6 +2109,8 @@ export default function ChatSessionPage() {
           projectFiles={projectFiles}
           onSend={handleChatInputSend}
           onSlashCommand={handleChatInputSlashCommand}
+          onBtw={(message) => sendBtw(sessionId, message)}
+          initialHistory={chatHistory}
         />
       </div>
 

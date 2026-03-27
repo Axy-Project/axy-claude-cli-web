@@ -437,6 +437,9 @@ export default function UserSettingsPage() {
         )}
       </div>
 
+      {/* Claude CLI Version */}
+      <ClaudeCliVersionSection />
+
       {/* GitHub Accounts section */}
       <AccountSection
         title="GitHub Accounts"
@@ -526,6 +529,128 @@ export default function UserSettingsPage() {
       {/* Admin: All Users Management */}
       {user?.isAdmin && <UserManagementSection />}
 
+    </div>
+  )
+}
+
+function ClaudeCliVersionSection() {
+  const [cliInfo, setCliInfo] = useState<{
+    currentVersion: string; latestVersion: string | null; updateAvailable: boolean; updateCommand: string
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
+  const [updateResult, setUpdateResult] = useState<string | null>(null)
+
+  useEffect(() => {
+    api.get<{ success: boolean; data: typeof cliInfo }>('/api/health/cli-version')
+      .then((res) => setCliInfo(res.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleUpdate = async () => {
+    setUpdating(true)
+    setUpdateResult(null)
+    try {
+      const res = await api.post<{ success: boolean; message: string; command: string }>('/api/health/cli-update', {})
+      setUpdateResult(`Updating... (${res.command})`)
+      // Poll for completion after a delay
+      setTimeout(async () => {
+        try {
+          const info = await api.get<{ success: boolean; data: typeof cliInfo }>('/api/health/cli-version')
+          setCliInfo(info.data)
+          setUpdateResult('Update complete! Restart may be needed for changes to take effect.')
+        } catch { /* ignore */ }
+        finally { setUpdating(false) }
+      }, 15000)
+    } catch (err) {
+      setUpdateResult(`Update failed: ${(err as Error).message}`)
+      setUpdating(false)
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold">Claude CLI Version</h3>
+          <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+            Manage the Claude Code CLI installation used by Axy.
+          </p>
+        </div>
+        {cliInfo?.updateAvailable && (
+          <span className="flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: 'color-mix(in srgb, var(--primary) 15%, transparent)', color: 'var(--primary)' }}>
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: 'var(--primary)' }} />
+            Update available
+          </span>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="mt-3 flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--primary)]/30 border-t-[var(--primary)]" />
+          Checking CLI version...
+        </div>
+      ) : cliInfo ? (
+        <div className="mt-3 space-y-3">
+          <div className="flex items-center gap-4 rounded-lg bg-[var(--secondary)] px-4 py-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm font-medium">{cliInfo.currentVersion}</span>
+                {!cliInfo.updateAvailable && cliInfo.latestVersion && (
+                  <span className="rounded bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium text-green-500">latest</span>
+                )}
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                {cliInfo.latestVersion ? `Latest: ${cliInfo.latestVersion}` : 'Could not check for updates'}
+              </p>
+            </div>
+            {cliInfo.updateAvailable && (
+              <button
+                onClick={handleUpdate}
+                disabled={updating}
+                className="rounded-[0.375rem] px-4 py-2 text-xs font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))' }}
+              >
+                {updating ? 'Updating...' : 'Update CLI'}
+              </button>
+            )}
+          </div>
+
+          {cliInfo.updateAvailable && (
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2">
+              <p className="text-xs text-[var(--muted-foreground)]">
+                You can also update manually by running:
+              </p>
+              <code className="mt-1 block rounded bg-[var(--secondary)] px-2 py-1 font-mono text-xs text-[var(--primary)]">
+                {cliInfo.updateCommand}
+              </code>
+            </div>
+          )}
+
+          {updateResult && (
+            <p className={`text-xs ${updateResult.includes('failed') ? 'text-[var(--destructive)]' : 'text-[var(--muted-foreground)]'}`}>
+              {updateResult}
+            </p>
+          )}
+
+          <button
+            onClick={async () => {
+              setLoading(true)
+              try {
+                const info = await api.get<{ success: boolean; data: typeof cliInfo }>('/api/health/cli-version')
+                setCliInfo(info.data)
+              } catch { /* ignore */ }
+              finally { setLoading(false) }
+            }}
+            className="text-xs text-[var(--primary)] hover:underline"
+          >
+            Check for updates
+          </button>
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-[var(--muted-foreground)]">Could not detect Claude CLI installation.</p>
+      )}
     </div>
   )
 }

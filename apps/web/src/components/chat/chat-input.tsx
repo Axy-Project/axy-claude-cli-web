@@ -27,6 +27,8 @@ interface ChatInputProps {
   onSend: (payload: ChatInputSendPayload) => void
   onSlashCommand: (name: string, args: string) => void
   onStop?: () => void
+  onBtw?: (message: string) => void
+  initialHistory?: string[]
 }
 
 const TEXT_FILE_EXTENSIONS = ['.txt', '.md', '.json', '.csv']
@@ -67,15 +69,28 @@ export const ChatInput = memo(function ChatInput({
   projectFiles,
   onSend,
   onSlashCommand,
+  onBtw,
+  initialHistory,
 }: ChatInputProps) {
   const [input, setInput] = useState('')
   const [showSlashMenu, setShowSlashMenu] = useState(false)
   const [slashQuery, setSlashQuery] = useState('')
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([])
-  const [messageHistory, setMessageHistory] = useState<string[]>([])
+  const [messageHistory, setMessageHistory] = useState<string[]>(() => {
+    // Load from localStorage first, then merge with initialHistory
+    try {
+      const stored = localStorage.getItem(`chat-history-${sessionId}`)
+      if (stored) return JSON.parse(stored)
+    } catch { /* ignore */ }
+    return []
+  })
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [savedInput, setSavedInput] = useState('')
   const [voiceInterim, setVoiceInterim] = useState('')
+  // /btw state
+  const [showBtwInput, setShowBtwInput] = useState(false)
+  const [btwText, setBtwText] = useState('')
+  const btwInputRef = useRef<HTMLInputElement>(null)
   // @ mention state
   const [showAtMenu, setShowAtMenu] = useState(false)
   const [atQuery, setAtQuery] = useState('')
@@ -94,6 +109,27 @@ export const ChatInput = memo(function ChatInput({
       setVoiceInterim(transcript)
     },
   })
+
+  // Merge initialHistory (from loaded messages) with existing history
+  useEffect(() => {
+    if (!initialHistory?.length) return
+    setMessageHistory((prev) => {
+      const combined = [...prev]
+      for (const msg of initialHistory) {
+        if (msg && !combined.includes(msg)) combined.push(msg)
+      }
+      const trimmed = combined.slice(0, 100)
+      try { localStorage.setItem(`chat-history-${sessionId}`, JSON.stringify(trimmed)) } catch { /* ignore */ }
+      return trimmed
+    })
+  }, [initialHistory, sessionId])
+
+  // Persist message history to localStorage when it changes
+  useEffect(() => {
+    if (messageHistory.length > 0) {
+      try { localStorage.setItem(`chat-history-${sessionId}`, JSON.stringify(messageHistory.slice(0, 100))) } catch { /* ignore */ }
+    }
+  }, [messageHistory, sessionId])
 
   // Restore draft on mount
   useEffect(() => {
@@ -278,6 +314,20 @@ export const ChatInput = memo(function ChatInput({
       const spaceIdx = content.indexOf(' ')
       const name = spaceIdx > 0 ? content.slice(1, spaceIdx) : content.slice(1)
       const args = spaceIdx > 0 ? content.slice(spaceIdx + 1).trim() : ''
+
+      // Handle /btw inline — if there are args, send directly; otherwise show btw input
+      if (name === 'btw') {
+        setInput('')
+        localStorage.removeItem(`chat-draft-${sessionId}`)
+        if (args && onBtw) {
+          onBtw(args)
+        } else {
+          setShowBtwInput(true)
+          setTimeout(() => btwInputRef.current?.focus(), 50)
+        }
+        return
+      }
+
       setInput('')
       localStorage.removeItem(`chat-draft-${sessionId}`)
       onSlashCommand(name, args)
@@ -400,6 +450,70 @@ export const ChatInput = memo(function ChatInput({
               <button type="button" onClick={() => removeImage(i)} className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#ff6e84] text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">x</button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Floating BTW input — shown during streaming */}
+      {showBtwInput && isStreaming && (
+        <div className="mb-2 flex items-center gap-2 rounded-[0.75rem] px-3 py-2 animate-in slide-in-from-bottom-2" style={{ background: 'rgba(189,157,255,0.08)', border: '1px solid rgba(189,157,255,0.25)' }}>
+          <span className="shrink-0 text-xs font-bold text-[#bd9dff]">BTW</span>
+          <input
+            ref={btwInputRef}
+            type="text"
+            value={btwText}
+            onChange={(e) => setBtwText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && btwText.trim()) {
+                onBtw?.(btwText.trim())
+                setBtwText('')
+                setShowBtwInput(false)
+                inputRef.current?.focus()
+              }
+              if (e.key === 'Escape') {
+                setShowBtwInput(false)
+                setBtwText('')
+                inputRef.current?.focus()
+              }
+            }}
+            placeholder="Tell Claude something while it works..."
+            className="min-w-0 flex-1 border-none bg-transparent text-sm text-white outline-none placeholder:text-[#767575]/60"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (btwText.trim()) {
+                onBtw?.(btwText.trim())
+                setBtwText('')
+              }
+              setShowBtwInput(false)
+              inputRef.current?.focus()
+            }}
+            className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-[#bd9dff] transition-colors hover:bg-[#bd9dff]/10"
+          >
+            Send
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowBtwInput(false); setBtwText(''); inputRef.current?.focus() }}
+            className="shrink-0 rounded-md p-1 text-[#767575] transition-colors hover:text-white"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
+
+      {/* Quick BTW button during streaming */}
+      {isStreaming && !showBtwInput && onBtw && (
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => { setShowBtwInput(true); setTimeout(() => btwInputRef.current?.focus(), 50) }}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium transition-all hover:brightness-110"
+            style={{ background: 'rgba(189,157,255,0.1)', color: '#bd9dff', border: '1px solid rgba(189,157,255,0.2)' }}
+          >
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+            /btw — Tell Claude something
+          </button>
         </div>
       )}
 

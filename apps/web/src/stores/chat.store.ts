@@ -72,6 +72,7 @@ interface ChatState {
   fetchMoreMessages: (sessionId: string) => Promise<void>
   branchSession: (sessionId: string, fromMessageId: string) => Promise<Session>
   sendMessage: (sessionId: string, content: string, agentId?: string, images?: { data: string; mimeType: string; name?: string }[], mode?: string, effort?: string) => Promise<void>
+  sendBtw: (sessionId: string, message: string) => Promise<boolean>
   stopGeneration: (sessionId: string) => Promise<void>
   checkAndReplayStream: (sessionId: string) => Promise<void>
   initWsListeners: () => () => void
@@ -236,6 +237,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
           : state.messages,
         ...patchStream(state, sessionId, () => emptyStreamState()),
       }))
+    }
+  },
+
+  sendBtw: async (sessionId, message) => {
+    try {
+      await api.post('/api/chat/btw', { sessionId, message })
+      // Add a visual indicator in the chat as a user message tagged as btw
+      const btwMessage: Message = {
+        id: uuid(),
+        sessionId,
+        role: 'user',
+        contentJson: [{ type: 'text', text: `💬 **BTW:** ${message}` }],
+        createdAt: new Date().toISOString(),
+      }
+      if (get().currentSession?.id === sessionId) {
+        set((state) => ({ messages: [...state.messages, btwMessage] }))
+      }
+      return true
+    } catch {
+      return false
     }
   },
 

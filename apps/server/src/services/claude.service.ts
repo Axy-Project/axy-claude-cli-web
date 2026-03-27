@@ -87,6 +87,8 @@ export class ClaudeService {
   private activeProcesses = new Map<string, ChildProcess>()
   /** Per-session message queue — messages wait here while a process is active */
   private messageQueues = new Map<string, ChatParams[]>()
+  /** Per-session "by the way" messages — injected into the NEXT turn after current finishes */
+  private btwQueues = new Map<string, string[]>()
 
   /** Broadcast event to WS clients AND buffer it for replay */
   private emit(sessionId: string, type: string, data: unknown): void {
@@ -99,9 +101,48 @@ export class ClaudeService {
     return this.messageQueues.get(sessionId)?.length ?? 0
   }
 
+  /** Send a "by the way" follow-up message during active streaming */
+  sendBtw(sessionId: string, message: string): boolean {
+    if (!this.activeProcesses.has(sessionId)) return false
+    const queue = this.btwQueues.get(sessionId) || []
+    queue.push(message)
+    this.btwQueues.set(sessionId, queue)
+    log.info('BTW message queued', { sessionId, count: queue.length })
+
+    // Broadcast to client so UI can show the btw was received
+    broadcaster.toSession(sessionId, 'claude:btw-ack' as never, {
+      sessionId,
+      message,
+      queuedCount: queue.length,
+    } as never)
+    return true
+  }
+
+  /** Get pending btw messages and clear the queue */
+  private consumeBtwMessages(sessionId: string): string[] {
+    const msgs = this.btwQueues.get(sessionId) || []
+    this.btwQueues.delete(sessionId)
+    return msgs
+  }
+
   /** Process the next queued message for a session (if any) */
   private processQueue(sessionId: string): void {
+    // Check for btw messages first — they become a combined follow-up
+    const btwMessages = this.consumeBtwMessages(sessionId)
+
     const queue = this.messageQueues.get(sessionId)
+    if (btwMessages.length > 0 && (!queue || queue.length === 0)) {
+      // No regular queue but we have btw messages — create a follow-up turn
+      // We need to reconstruct params from the last message for this session
+      // For now btw messages prepend to next queue message
+      // If there's nothing queued, we'll need the last params
+      log.info('BTW messages pending but no queued message', { sessionId, btwCount: btwMessages.length })
+      // Store them back — they'll be consumed by the next sendMessage call
+      this.btwQueues.set(sessionId, btwMessages)
+      this.messageQueues.delete(sessionId)
+      return
+    }
+
     if (!queue || queue.length === 0) {
       this.messageQueues.delete(sessionId)
       return
@@ -275,6 +316,14 @@ export class ClaudeService {
       if (params.imagePaths?.length) {
         const imageRefs = params.imagePaths.map((p) => p).join('\n')
         prompt = `${params.content}\n\n[Attached images - read these files to see the images:]\n${imageRefs}`
+      }
+
+      // Inject any pending /btw messages from the previous turn
+      const btwMessages = this.consumeBtwMessages(params.sessionId)
+      if (btwMessages.length > 0) {
+        const btwContext = btwMessages.map((m) => `[BTW: ${m}]`).join('\n')
+        prompt = `${btwContext}\n\n${prompt}`
+        log.info('Injected BTW context', { sessionId: params.sessionId, btwCount: btwMessages.length })
       }
 
       // The prompt itself — use '--' to prevent prompts starting with '-' being parsed as CLI flags
@@ -630,6 +679,7 @@ export class ClaudeService {
   stopSession(sessionId: string): boolean {
     // Clear any queued messages when user explicitly stops
     this.messageQueues.delete(sessionId)
+    this.btwQueues.delete(sessionId)
     const child = this.activeProcesses.get(sessionId)
     if (child) {
       child.kill('SIGTERM')
@@ -649,6 +699,7 @@ export class ClaudeService {
       child.kill('SIGTERM')
     }
     this.activeProcesses.clear()
+    this.btwQueues.clear()
   }
 
   isSessionActive(sessionId: string): boolean {

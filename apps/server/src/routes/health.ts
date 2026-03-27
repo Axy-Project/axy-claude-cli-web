@@ -276,4 +276,90 @@ router.post('/rollback', async (req, res) => {
   }
 })
 
+/** GET /api/health/cli-version - Check Claude CLI version and update availability */
+router.get('/cli-version', async (_req, res) => {
+  try {
+    const { execSync } = await import('child_process')
+    let currentVersion = 'unknown'
+    let latestVersion: string | null = null
+    let updateCommand = ''
+
+    // Get current CLI version
+    try {
+      const output = execSync(`${config.claudePath} --version 2>&1`, { timeout: 10000 }).toString().trim()
+      // Output may be like "claude 1.0.3" or just "1.0.3"
+      const match = output.match(/(\d+\.\d+\.\d+)/)
+      currentVersion = match ? match[1] : output
+    } catch (e) {
+      currentVersion = 'not installed'
+    }
+
+    // Check for latest version from npm registry
+    try {
+      const npmRes = await fetch('https://registry.npmjs.org/@anthropic-ai/claude-code/latest', { signal: AbortSignal.timeout(5000) })
+      if (npmRes.ok) {
+        const data = await npmRes.json() as { version: string }
+        latestVersion = data.version
+      }
+    } catch { /* ignore */ }
+
+    // Detect package manager
+    try {
+      execSync('which brew 2>/dev/null', { timeout: 5000 })
+      updateCommand = 'brew upgrade claude-code'
+    } catch {
+      try {
+        execSync('which npm 2>/dev/null', { timeout: 5000 })
+        updateCommand = 'npm update -g @anthropic-ai/claude-code'
+      } catch {
+        updateCommand = 'npm update -g @anthropic-ai/claude-code'
+      }
+    }
+
+    const updateAvailable = latestVersion && currentVersion !== 'not installed' && currentVersion !== 'unknown' && latestVersion !== currentVersion
+
+    res.json({
+      success: true,
+      data: {
+        currentVersion,
+        latestVersion,
+        updateAvailable: !!updateAvailable,
+        updateCommand,
+      },
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
+/** POST /api/health/cli-update - Update Claude CLI */
+router.post('/cli-update', async (_req, res) => {
+  try {
+    const { exec } = await import('child_process')
+
+    // Detect package manager and run update
+    let updateCmd: string
+    try {
+      const { execSync } = await import('child_process')
+      execSync('which brew 2>/dev/null', { timeout: 5000 })
+      updateCmd = 'brew upgrade claude-code 2>&1'
+    } catch {
+      updateCmd = 'npm update -g @anthropic-ai/claude-code 2>&1'
+    }
+
+    res.json({ success: true, message: 'Update started', command: updateCmd })
+
+    // Run update in background
+    exec(updateCmd, { timeout: 120000 }, (err, stdout, stderr) => {
+      if (err) {
+        console.error('[CLI Update] Failed:', err.message, stderr)
+      } else {
+        console.log('[CLI Update] Success:', stdout.trim())
+      }
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
+  }
+})
+
 export default router

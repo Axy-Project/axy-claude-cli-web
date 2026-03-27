@@ -121,6 +121,11 @@ export interface WsServerEvents {
     sessionId: string
     queueSize: number
   }
+  'claude:btw-ack': {
+    sessionId: string
+    message: string
+    queuedCount: number
+  }
   'notification:new': {
     id: string
     userId: string
