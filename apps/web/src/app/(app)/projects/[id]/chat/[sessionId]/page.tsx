@@ -32,6 +32,7 @@ import { ChatInput, type ChatInputSendPayload } from '@/components/chat/chat-inp
 import { SplitTerminal } from '@/components/terminal/split-terminal'
 import { MultiChatPanel } from '@/components/chat/multi-chat-panel'
 import { MultiChatPicker } from '@/components/chat/multi-chat-picker'
+import { DevelopViewPanel } from '@/components/chat/develop-view-panel'
 
 // ────────────────────────────────────────────────────────────
 // Collapsible Section
@@ -1201,6 +1202,9 @@ export default function ChatSessionPage() {
   // Message search
   const [showSearch, setShowSearch] = useState(false)
   const [showMetrics, setShowMetrics] = useState(false)
+  const [developView, setDevelopView] = useState(() => {
+    try { return localStorage.getItem('axy-develop-view') === 'true' } catch { return false }
+  })
   const [searchQuery, setSearchQuery] = useState('')
   const [searchHighlightIndex, setSearchHighlightIndex] = useState(-1)
   // Loading more messages (pagination)
@@ -1892,6 +1896,19 @@ export default function ChatSessionPage() {
           <span className="hidden md:inline-flex">
             <MultiChatPicker projectId={projectId} currentSessionId={sessionId} />
           </span>
+          {/* Develop View toggle */}
+          <button
+            onClick={() => {
+              const next = !developView
+              setDevelopView(next)
+              try { localStorage.setItem('axy-develop-view', String(next)) } catch {}
+            }}
+            className="hidden rounded-[0.375rem] p-1.5 text-[#adaaaa] transition-colors hover:text-white md:block"
+            style={{ background: developView ? 'rgba(52,211,153,0.1)' : '#1a1a1a', border: developView ? '1px solid rgba(52,211,153,0.2)' : '1px solid rgba(72,72,71,0.2)' }}
+            title={developView ? 'Hide Develop View' : 'Show Develop View'}
+          >
+            <svg className="h-3.5 w-3.5" style={developView ? { color: '#34d399' } : undefined} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" /></svg>
+          </button>
           <button
             onClick={() => setShowMetrics(!showMetrics)}
             className="rounded-[0.375rem] p-1.5 text-[#adaaaa] transition-colors hover:text-white"
@@ -2125,6 +2142,17 @@ export default function ChatSessionPage() {
         />
       )}
       </div>{/* end left chat area */}
+
+      {/* MIDDLE: Develop View Panel */}
+      {developView && (
+        <div className="hidden w-80 shrink-0 border-l border-[rgba(72,72,71,0.15)] md:block lg:w-96">
+          <DevelopViewPanel
+            messages={messages}
+            streamingToolCalls={streamingToolCalls}
+            isStreaming={isStreaming}
+          />
+        </div>
+      )}
 
       {/* RIGHT: Session Panel (togglable) */}
       {showMetrics && (
