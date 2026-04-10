@@ -71,7 +71,7 @@ interface ChatState {
   fetchMessages: (sessionId: string) => Promise<void>
   fetchMoreMessages: (sessionId: string) => Promise<void>
   branchSession: (sessionId: string, fromMessageId: string) => Promise<Session>
-  sendMessage: (sessionId: string, content: string, agentId?: string, images?: { data: string; mimeType: string; name?: string }[], mode?: string, effort?: string) => Promise<void>
+  sendMessage: (sessionId: string, content: string, agentId?: string, images?: { data: string; mimeType: string; name?: string }[], mode?: string, effort?: string, customSystemPrompt?: string) => Promise<void>
   sendBtw: (sessionId: string, message: string) => Promise<boolean>
   stopGeneration: (sessionId: string) => Promise<void>
   checkAndReplayStream: (sessionId: string) => Promise<void>
@@ -178,7 +178,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (sessionId, content, agentId?, images?, mode?, effort?) => {
+  sendMessage: async (sessionId, content, agentId?, images?, mode?, effort?, customSystemPrompt?) => {
     // Set streaming state for THIS session (only if not already streaming —
     // if already streaming, server will queue the message)
     set((state) => {
@@ -220,7 +220,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Send via REST (triggers WebSocket streaming)
     try {
-      await api.post('/api/chat/send', { sessionId, content, agentId, images, mode, effort })
+      await api.post('/api/chat/send', { sessionId, content, agentId, images, mode, effort, customSystemPrompt })
     } catch (err) {
       const error = err instanceof Error ? err.message : 'Failed to send message'
       const errorMessage: Message = {

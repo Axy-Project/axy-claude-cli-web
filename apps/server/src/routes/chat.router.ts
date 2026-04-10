@@ -17,13 +17,14 @@ router.use(authMiddleware)
 /** POST /api/chat/send - Send message to Claude */
 router.post('/send', async (req: AuthenticatedRequest, res) => {
   try {
-    const { sessionId, content, mode, agentId, images, effort } = req.body as {
+    const { sessionId, content, mode, agentId, images, effort, customSystemPrompt } = req.body as {
       sessionId?: string
       content?: string
       mode?: string
       agentId?: string
       images?: { data: string; mimeType: string; name?: string }[]
       effort?: string
+      customSystemPrompt?: string
     }
 
     const hasImages = images && images.length > 0
@@ -114,8 +115,10 @@ router.post('/send', async (req: AuthenticatedRequest, res) => {
       'Do NOT ask the user to authenticate, configure tokens, or run commands in a separate terminal. Just execute git commands directly when asked.',
     ].join('\n')
 
-    const finalSystemPrompt = systemPrompt
-      ? `${systemPrompt}\n\n---\n${platformContext}`
+    // Merge: custom system prompt takes priority, then agent prompt
+    const combinedPrompt = [customSystemPrompt, systemPrompt].filter(Boolean).join('\n\n---\n\n')
+    const finalSystemPrompt = combinedPrompt
+      ? `${combinedPrompt}\n\n---\n${platformContext}`
       : platformContext
 
     // For image-only messages, use a placeholder so Claude knows to analyze the images

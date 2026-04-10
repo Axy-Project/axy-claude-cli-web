@@ -33,6 +33,7 @@ import { SplitTerminal } from '@/components/terminal/split-terminal'
 import { MultiChatPanel } from '@/components/chat/multi-chat-panel'
 import { MultiChatPicker } from '@/components/chat/multi-chat-picker'
 import { DevelopViewPanel } from '@/components/chat/develop-view-panel'
+import { SystemPromptPanel } from '@/components/chat/system-prompt-panel'
 
 // ────────────────────────────────────────────────────────────
 // Collapsible Section
@@ -1205,6 +1206,12 @@ export default function ChatSessionPage() {
   const [developView, setDevelopView] = useState(() => {
     try { return localStorage.getItem('axy-develop-view') === 'true' } catch { return false }
   })
+  const [systemPrompt, setSystemPrompt] = useState(() => {
+    try { return localStorage.getItem(`axy-sysprompt-${sessionId}`) || '' } catch { return '' }
+  })
+  const [showSystemPrompt, setShowSystemPrompt] = useState(() => {
+    try { return localStorage.getItem(`axy-sysprompt-${sessionId}`)?.length ? true : false } catch { return false }
+  })
   const [searchQuery, setSearchQuery] = useState('')
   const [searchHighlightIndex, setSearchHighlightIndex] = useState(-1)
   // Loading more messages (pagination)
@@ -1738,7 +1745,7 @@ export default function ChatSessionPage() {
         if (result.agent) {
           setAgent(result.agent, result.reasoning)
           const modeToSend = planMode ? 'plan' : undefined
-          await sendMessage(sessionId, content, result.agent.id, imagesToSend, modeToSend, effortLevel)
+          await sendMessage(sessionId, content, result.agent.id, imagesToSend, modeToSend, effortLevel, systemPrompt || undefined)
           return
         }
       } catch {
@@ -1747,8 +1754,8 @@ export default function ChatSessionPage() {
     }
 
     const modeToSend = planMode ? 'plan' : undefined
-    await sendMessage(sessionId, content, activeAgent?.id, imagesToSend, modeToSend, effortLevel)
-  }, [autoOrchestrate, projectId, sessionId, setAgent, planMode, sendMessage, activeAgent, effortLevel])
+    await sendMessage(sessionId, content, activeAgent?.id, imagesToSend, modeToSend, effortLevel, systemPrompt || undefined)
+  }, [autoOrchestrate, projectId, sessionId, setAgent, planMode, sendMessage, activeAgent, effortLevel, systemPrompt])
 
   const handleChatInputSlashCommand = useCallback((name: string, args: string) => {
     executeSlashCommand(name, args)
@@ -1896,6 +1903,15 @@ export default function ChatSessionPage() {
           <span className="hidden md:inline-flex">
             <MultiChatPicker projectId={projectId} currentSessionId={sessionId} />
           </span>
+          {/* System Prompt toggle */}
+          <button
+            onClick={() => setShowSystemPrompt(!showSystemPrompt)}
+            className="rounded-[0.375rem] p-1.5 text-[#adaaaa] transition-colors hover:text-white"
+            style={{ background: showSystemPrompt ? 'rgba(189,157,255,0.1)' : '#1a1a1a', border: showSystemPrompt ? '1px solid rgba(189,157,255,0.2)' : '1px solid rgba(72,72,71,0.2)' }}
+            title={showSystemPrompt ? 'Hide System Prompt' : 'Show System Prompt'}
+          >
+            <svg className="h-3.5 w-3.5" style={showSystemPrompt ? { color: 'var(--primary)' } : undefined} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
+          </button>
           {/* Develop View toggle */}
           <button
             onClick={() => {
@@ -2109,6 +2125,19 @@ export default function ChatSessionPage() {
           onOverride={overrideAgent}
           isVisible={!!activeAgent}
         />
+
+        {/* System Prompt Panel */}
+        {showSystemPrompt && (
+          <SystemPromptPanel
+            sessionId={sessionId}
+            value={systemPrompt}
+            onChange={(v) => {
+              setSystemPrompt(v)
+              try { localStorage.setItem(`axy-sysprompt-${sessionId}`, v) } catch {}
+            }}
+            onCollapse={() => setShowSystemPrompt(false)}
+          />
+        )}
 
         {/* Engine badge (model selector) + shortcut — right-aligned, hidden on mobile */}
         <div className="hidden items-center justify-end gap-2 pb-1 md:flex">
