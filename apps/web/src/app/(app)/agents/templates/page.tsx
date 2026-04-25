@@ -16,6 +16,7 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
 }
 
 const MODEL_TIER_COLORS: Record<string, string> = {
+  ultra: 'text-fuchsia-400',
   premium: 'text-amber-400',
   standard: 'text-blue-400',
   fast: 'text-green-400',

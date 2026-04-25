@@ -3,9 +3,11 @@ export const APP_NAME = 'Axy'
 export const DEFAULT_MODEL = 'claude-sonnet-4-6'
 
 export const MODELS = [
+  { id: 'claude-opus-4-7', name: 'Claude Opus 4.7', tier: 'ultra' },
   { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', tier: 'premium' },
   { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', tier: 'standard' },
   { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', tier: 'standard' },
+  { id: 'claude-haiku-4-6', name: 'Claude Haiku 4.6', tier: 'fast' },
   { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', tier: 'fast' },
 ] as const
 

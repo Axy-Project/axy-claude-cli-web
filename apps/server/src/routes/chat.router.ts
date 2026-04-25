@@ -137,7 +137,7 @@ router.post('/send', async (req: AuthenticatedRequest, res) => {
       permissionMode: project.permissionMode,
       imagePaths,
       cliSessionId: session.cliSessionId,
-      effort: effort as 'low' | 'medium' | 'high' | 'max' | undefined,
+      effort: effort as 'low' | 'medium' | 'high' | 'max' | 'ultra' | undefined,
     })
 
     const queueSize = claudeService.getQueueSize(sessionId)

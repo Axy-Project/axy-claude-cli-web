@@ -34,6 +34,7 @@ import { MultiChatPanel } from '@/components/chat/multi-chat-panel'
 import { MultiChatPicker } from '@/components/chat/multi-chat-picker'
 import { DevelopViewPanel } from '@/components/chat/develop-view-panel'
 import { SystemPromptPanel } from '@/components/chat/system-prompt-panel'
+import { LoopModePanel } from '@/components/chat/loop-mode-panel'
 
 // ────────────────────────────────────────────────────────────
 // Collapsible Section
@@ -542,6 +543,41 @@ function MarkdownContent({ content }: { content: string }) {
 }
 
 // ────────────────────────────────────────────────────────────
+// Copy Message Button (inline, with feedback)
+// ────────────────────────────────────────────────────────────
+function CopyMessageButton({ msg }: { msg: Message }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        const text = msg.contentJson
+          ?.filter((b: ContentBlock) => b.type === 'text')
+          .map((b: ContentBlock) => b.text)
+          .join('\n') || ''
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        })
+      }}
+      title="Copy message"
+      className="flex items-center gap-1 rounded border border-[var(--border)] bg-[var(--background)] px-1.5 py-0.5 text-[10px] text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
+    >
+      {copied ? (
+        <svg className="h-3 w-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      )}
+      <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
+    </button>
+  )
+}
+
+// ────────────────────────────────────────────────────────────
 // User Message
 // ────────────────────────────────────────────────────────────
 const UserMessageView = memo(function UserMessageView({ msg }: { msg: Message }) {
@@ -980,6 +1016,7 @@ function EngineModelSelector({
 // Model Selector Dropdown
 // ────────────────────────────────────────────────────────────
 const TIER_COLORS: Record<string, { dot: string; bg: string; text: string }> = {
+  ultra: { dot: 'bg-fuchsia-400', bg: 'bg-fuchsia-500/10', text: 'text-fuchsia-400' },
   premium: { dot: 'bg-amber-400', bg: 'bg-amber-500/10', text: 'text-amber-400' },
   standard: { dot: 'bg-blue-400', bg: 'bg-blue-500/10', text: 'text-blue-400' },
   fast: { dot: 'bg-green-400', bg: 'bg-green-500/10', text: 'text-green-400' },
@@ -1088,10 +1125,11 @@ function ModelSelector({
 // Effort Level Selector
 // ────────────────────────────────────────────────────────────
 const EFFORT_LEVELS = [
-  { id: 'low', label: 'Low', color: 'text-green-400', bg: 'bg-green-500/10', desc: 'Fast, minimal thinking' },
-  { id: 'medium', label: 'Medium', color: 'text-blue-400', bg: 'bg-blue-500/10', desc: 'Balanced performance' },
-  { id: 'high', label: 'High', color: 'text-amber-400', bg: 'bg-amber-500/10', desc: 'Extended thinking' },
-  { id: 'max', label: 'Max', color: 'text-red-400', bg: 'bg-red-500/10', desc: 'Maximum reasoning depth' },
+  { id: 'low', label: 'Low', color: 'text-green-400', bg: 'bg-green-500/10', desc: 'Fast, minimal thinking', icon: '1x' },
+  { id: 'medium', label: 'Medium', color: 'text-blue-400', bg: 'bg-blue-500/10', desc: 'Balanced performance', icon: '2x' },
+  { id: 'high', label: 'High', color: 'text-amber-400', bg: 'bg-amber-500/10', desc: 'Extended thinking', icon: '4x' },
+  { id: 'max', label: 'Max', color: 'text-red-400', bg: 'bg-red-500/10', desc: 'Max reasoning depth', icon: '8x' },
+  { id: 'ultra', label: 'Ultra', color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10', desc: 'Opus-tier deep reasoning', icon: '16x' },
 ] as const
 
 function EffortSelector({
@@ -1156,6 +1194,7 @@ function EffortSelector({
                   isActive ? 'bg-[var(--secondary)]/60' : ''
                 }`}
               >
+                <span className={`w-6 shrink-0 rounded px-1 py-0.5 text-center text-[9px] font-bold ${level.bg} ${level.color}`}>{level.icon}</span>
                 <span className={`font-medium ${level.color}`}>{level.label}</span>
                 <span className="flex-1 text-[var(--muted-foreground)]">{level.desc}</span>
                 {isActive && (
@@ -1203,6 +1242,7 @@ export default function ChatSessionPage() {
   // Message search
   const [showSearch, setShowSearch] = useState(false)
   const [showMetrics, setShowMetrics] = useState(false)
+  const [showLoop, setShowLoop] = useState(false)
   const [developView, setDevelopView] = useState(() => {
     try { return localStorage.getItem('axy-develop-view') === 'true' } catch { return false }
   })
@@ -1912,6 +1952,15 @@ export default function ChatSessionPage() {
           >
             <svg className="h-3.5 w-3.5" style={showSystemPrompt ? { color: 'var(--primary)' } : undefined} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
           </button>
+          {/* Loop Mode toggle */}
+          <button
+            onClick={() => setShowLoop(!showLoop)}
+            className="rounded-[0.375rem] p-1.5 text-[#adaaaa] transition-colors hover:text-white"
+            style={{ background: showLoop ? 'rgba(168,85,247,0.1)' : '#1a1a1a', border: showLoop ? '1px solid rgba(168,85,247,0.2)' : '1px solid rgba(72,72,71,0.2)' }}
+            title={showLoop ? 'Hide Loop Mode' : 'Loop Mode — repeat a prompt on interval'}
+          >
+            <svg className="h-3.5 w-3.5" style={showLoop ? { color: '#a855f7' } : undefined} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          </button>
           {/* Develop View toggle */}
           <button
             onClick={() => {
@@ -2060,32 +2109,37 @@ export default function ChatSessionPage() {
                 ) : (
                   <AssistantMessageView msg={msg} />
                 )}
-                {/* Branch from here button */}
-                <button
-                  type="button"
-                  onClick={() => handleBranch(msg.id)}
-                  title="Branch from here"
-                  className="absolute right-2 top-3 flex items-center gap-1 rounded border border-[var(--border)] bg-[var(--background)] px-1.5 py-0.5 text-[10px] text-[var(--muted-foreground)] opacity-0 transition-opacity hover:border-[var(--primary)]/40 hover:text-[var(--primary)] group-hover/branch:opacity-100"
-                >
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 3v12m0 0a3 3 0 103 3H6m0-3h12a3 3 0 013-3V6a3 3 0 00-3-3H9a3 3 0 00-3 3v6" />
-                  </svg>
-                  <span className="hidden sm:inline">Branch</span>
-                </button>
-                {/* Regenerate button on last assistant message */}
-                {isLastAssistant && (
+                {/* Message actions toolbar */}
+                <div className="absolute right-2 top-3 flex items-center gap-1 opacity-0 transition-opacity group-hover/branch:opacity-100">
+                  {/* Copy message */}
+                  <CopyMessageButton msg={msg} />
+                  {/* Branch from here */}
                   <button
                     type="button"
-                    onClick={handleRegenerate}
-                    title="Regenerate response"
-                    className="absolute right-2 bottom-2 flex items-center gap-1 rounded border border-[var(--border)] bg-[var(--background)] px-1.5 py-0.5 text-[10px] text-[var(--muted-foreground)] opacity-0 transition-opacity hover:border-[var(--primary)]/40 hover:text-[var(--primary)] group-hover/branch:opacity-100"
+                    onClick={() => handleBranch(msg.id)}
+                    title="Branch from here"
+                    className="flex items-center gap-1 rounded border border-[var(--border)] bg-[var(--background)] px-1.5 py-0.5 text-[10px] text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
                   >
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 3v12m0 0a3 3 0 103 3H6m0-3h12a3 3 0 013-3V6a3 3 0 00-3-3H9a3 3 0 00-3 3v6" />
                     </svg>
-                    <span>Regenerate</span>
+                    <span className="hidden sm:inline">Branch</span>
                   </button>
-                )}
+                  {/* Regenerate (only last assistant) */}
+                  {isLastAssistant && (
+                    <button
+                      type="button"
+                      onClick={handleRegenerate}
+                      title="Regenerate response"
+                      className="flex items-center gap-1 rounded border border-[var(--border)] bg-[var(--background)] px-1.5 py-0.5 text-[10px] text-[var(--muted-foreground)] transition-colors hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
+                    >
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Retry</span>
+                    </button>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -2136,6 +2190,16 @@ export default function ChatSessionPage() {
               try { localStorage.setItem(`axy-sysprompt-${sessionId}`, v) } catch {}
             }}
             onCollapse={() => setShowSystemPrompt(false)}
+          />
+        )}
+
+        {/* Loop Mode Panel */}
+        {showLoop && (
+          <LoopModePanel
+            sessionId={sessionId}
+            isStreaming={isStreaming}
+            onSendMessage={(content) => sendMessage(sessionId, content, activeAgent?.id, undefined, undefined, effortLevel, systemPrompt || undefined)}
+            onCollapse={() => setShowLoop(false)}
           />
         )}
 

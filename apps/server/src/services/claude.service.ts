@@ -31,7 +31,7 @@ interface ChatParams {
   disallowedTools?: string[]
   imagePaths?: string[]
   cliSessionId?: string | null
-  effort?: 'low' | 'medium' | 'high' | 'max'
+  effort?: 'low' | 'medium' | 'high' | 'max' | 'ultra'
 }
 
 // CLI stream-json event types (different from Anthropic API format)
@@ -267,8 +267,11 @@ export class ClaudeService {
       ]
 
       // Effort level (extended thinking)
+      // Map Axy levels to Claude CLI: low, medium, high
+      // 'max' and 'ultra' are Axy-specific — both map to 'high' for CLI
       if (params.effort) {
-        args.push('--effort', params.effort)
+        const cliEffort = params.effort === 'max' || params.effort === 'ultra' ? 'high' : params.effort
+        args.push('--effort', cliEffort)
       }
 
       // Resume previous CLI conversation if we have a session ID
